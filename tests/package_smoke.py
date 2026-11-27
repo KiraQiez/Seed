@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -12,7 +13,13 @@ from seed import __version__
 
 
 def _run(args: list[str], directory: Path) -> str:
-    return subprocess.check_output(args, cwd=directory, encoding="utf-8", timeout=180)
+    return subprocess.check_output(
+        args,
+        cwd=directory,
+        encoding="utf-8",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        timeout=180,
+    )
 
 
 def verify_dist(directory: Path) -> None:
