@@ -14,6 +14,7 @@ from seed import __version__
 from seed.apply_command import run_apply
 from seed.config import ConfigError
 from seed.database import DatabaseError
+from seed.export import ExportFormat, run_export
 from seed.initialize import initialize_config
 from seed.inspection import inspect_database
 from seed.inspection_output import inspection_lines
@@ -343,6 +344,43 @@ def apply(
         elif report.insertion is not None and report.insertion.counts is not None:
             for count in report.insertion.counts:
                 result(f"Committed {count.rows} rows to {json.dumps(count.table.table)}.")
+    if report.status:
+        raise typer.Exit(report.status)
+
+
+@app.command()
+def export(
+    format: Annotated[ExportFormat, typer.Option("--format", help="Artifact format.")],
+    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
+        "./seed.toml"
+    ),
+    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
+    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
+    rows: Annotated[int | None, typer.Option("--rows", help="Override one table’s count.")] = None,
+    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
+    locale: Annotated[str | None, typer.Option("--locale")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+    output: Annotated[Path, typer.Option("--output", help="New export directory.")] = Path(
+        "./seed-export"
+    ),
+) -> None:
+    """Export a relational dataset from a read-only schema snapshot."""
+    report = run_export(
+        PlanRequest(config, schema, table or [], rows, locale, random_seed), format, output
+    )
+    if verbose and report.result is not None:
+        diagnostic("Published the export manifest.")
+    if as_json:
+        data: dict[str, object] | None = (
+            {"export": report.result.payload()} if report.result is not None else None
+        )
+        _json_response("export", report.status, data, list(report.issues))
+    else:
+        for issue in report.issues:
+            _render_issue(issue)
+        if report.result is not None:
+            result(f"Exported to {json.dumps(str(report.result.directory))}.")
     if report.status:
         raise typer.Exit(report.status)
 

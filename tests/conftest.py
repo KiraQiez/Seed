@@ -14,13 +14,20 @@ import pytest
 COMPOSE_FILE = Path(__file__).with_name("integration") / "compose.yaml"
 
 
-def _docker(args: list[str], env: dict[str, str], timeout: int = 30) -> str:
+def _docker(
+    args: list[str],
+    env: dict[str, str],
+    timeout: int = 30,
+    *,
+    input_text: str | None = None,
+) -> str:
     try:
         process = subprocess.run(
             ["docker", *args],
             env=env,
+            input=input_text,
+            encoding="utf-8",
             capture_output=True,
-            text=True,
             timeout=timeout,
             check=False,
         )
@@ -50,26 +57,28 @@ class PostgresFixture:
 
     def sql(self, statement: str) -> str:
         """Execute a fixture-owned setup or observation statement."""
-        return _docker(
-            [
-                *self.compose,
-                "exec",
-                "-T",
-                "postgres",
-                "psql",
-                "-X",
-                "-U",
-                "seed_fixture",
-                "-d",
-                self.database,
-                "-At",
-                "-v",
-                "ON_ERROR_STOP=1",
-                "-c",
-                statement,
-            ],
-            self.env,
-        )
+        return _docker([*self._psql(), "-c", statement], self.env)
+
+    def script(self, contents: str) -> str:
+        """Run a UTF-8 SQL script through psql in the owned fixture."""
+        return _docker([*self._psql(), "-f", "-"], self.env, input_text=contents)
+
+    def _psql(self) -> list[str]:
+        return [
+            *self.compose,
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-X",
+            "-U",
+            "seed_fixture",
+            "-d",
+            self.database,
+            "-At",
+            "-v",
+            "ON_ERROR_STOP=1",
+        ]
 
 
 @pytest.fixture(scope="session")

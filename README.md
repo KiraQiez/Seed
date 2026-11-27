@@ -4,7 +4,7 @@
 
 Seed is a planned open-source CLI for populating development and test databases with realistic synthetic data. It inspects a PostgreSQL schema, plans parent-first generation, and lets developers and QA teams review the results before applying or exporting them.
 
-**Status.** The Python foundation is available from source. It provides help, version, starter configuration creation, read-only PostgreSQL schema inspection, generation planning, validation, offline preview, and guarded database apply. Export is planned.
+**Status.** The Python foundation is available from source. It provides help, version, starter configuration creation, read-only PostgreSQL schema inspection, generation planning, validation, offline preview, guarded database apply, and SQL, CSV, and JSON exports.
 
 Run `just setup`, then `uv run seed --help` or `uv run seed init`. Set the configured connection environment variable and run `uv run seed inspect` to inspect a schema.
 
@@ -16,10 +16,11 @@ seed inspect
 seed plan --table customers
 seed preview --table customers --limit 5
 seed validate --table customers --dataset
+seed export --table customers --format json
 seed apply --table customers --dry-run
 ```
 
-Set the connection URL in the environment variable named in [the configuration](docs/DATA_MODEL.md#configuration). To write rows, configure an explicit development or test target and review `seed apply --dry-run` before `seed apply`.
+Set the connection URL in the environment variable named in [the configuration](docs/DATA_MODEL.md#configuration). To write rows, configure an explicit development or test target and review `seed apply --dry-run` before `seed apply`. Export creates a new directory with a completion manifest. See the [import and sequence instructions](docs/SECURITY.md#sql-and-export-safety) before loading artifacts.
 
 The MVP uses a standalone Python package, PostgreSQL, and Faker. It includes supported composite keys, deterministic data generation, transactional insertion, and SQL, CSV, and JSON exports. See the [product requirements](docs/PRD.md#mvp-workflow) for scope.
 

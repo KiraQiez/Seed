@@ -1,6 +1,6 @@
 # CLI specification
 
-Help, version, `init`, `inspect`, `plan`, `preview`, `validate`, and `apply` are available. Export is planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
+Help, version, `init`, `inspect`, `plan`, `preview`, `validate`, `apply`, and `export` are available. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
 
 ## Commands
 
@@ -12,7 +12,7 @@ Help, version, `init`, `inspect`, `plan`, `preview`, `validate`, and `apply` are
 | `seed preview` | Selection and generation overrides, `--limit N` | Generate an offline sample and show its plan and validation issues. Show up to `N` rows per explicitly selected table, default 5 and allowed range 1–100. Parents needed for sampled descendants generate their full key pools. Output still respects the sample limit. |
 | `seed validate` | Selection and generation overrides, `--dataset` | Check the configuration and selected schema for generation compatibility. `--dataset` also generates and validates the entire offline dataset in batches, discards rows, and reports counts and issues for each stage. |
 | `seed apply` | Selection and generation overrides, `--dry-run`, `--yes` | Preflight the live plan, request confirmation for a real write, and report committed counts. Dry-run stops after the read-only preflight. Combining `--dry-run` with `--yes` is a usage error. |
-| `seed export` | Selection and generation overrides, required `--format sql\|csv\|json`, `--output DIR` | Write the selected offline format to a new directory, `./seed-export` by default, and report its artifact inventory. |
+| `seed export` | Selection and generation overrides, required `--format sql\|csv\|json`, `--output DIR` | Write the selected offline format to a new directory under an existing parent, `./seed-export` by default, and report its artifact inventory. |
 
 All commands accept `--config PATH` (default `./seed.toml`), `--json`, and `--verbose`. Selection and generation overrides are `--schema`, repeatable `--table`, `--rows`, `--random-seed`, and `--locale`. `--rows` requires exactly one `--table`. Verbose diagnostics go to stderr. Previewed rows are a prefix of the equivalent export for that table. Live apply uses actual returned server keys. [Configuration precedence and name syntax](DATA_MODEL.md#configuration)
 
@@ -46,7 +46,7 @@ Use the following `data` payloads. Their component fields and typed values are d
 | `preview` | `{plan, tables}` with ordered sample datasets |
 | `validate` | `{config, plan, dataset}` stage results |
 | `apply` | `{dry_run, plan, insertion}`. Dry-run returns `insertion: null`. Real runs include the outcome, and only acknowledged commits include `counts` with `{table, rows}` entries. |
-| `export` | `{export}` with manifest, paths, and counts |
+| `export` | `{export}` with `format`, `directory`, `manifest`, relative `artifacts`, and per-table `counts`. Failure returns null data |
 
 ## Exit status
 
