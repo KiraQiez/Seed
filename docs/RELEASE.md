@@ -8,7 +8,7 @@ Use SemVer. Start with approved `0.x` releases, publish pre-release candidates w
 
 ## Build and validation
 
-1. Review the [release checklist](../ai/CHECKLIST.md#before-release), run the full tests and benchmarks, and review the support matrix and limitations.
+1. Review the [release checklist](../.ai/CHECKLIST.md#before-release), run the full tests and benchmarks, and review the support matrix and limitations.
 2. Update the changelog with features, fixes, security changes, compatibility notes, and relevant upgrades. Ensure the package version, changelog, and intended Git tag agree.
 3. Build the wheel and source distribution with `uv build` using Hatchling. Inspect included files, package metadata, dependency declarations, licence, and entry point. Build a wheel from the sdist to verify a complete source artifact.
 4. Run a clean wheel install and the [smoke tests](DEVELOPMENT.md#tooling-and-quality-gates) on supported platforms. Record versions, results, and artifact hashes.
