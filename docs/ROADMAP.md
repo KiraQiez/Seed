@@ -29,9 +29,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 - [ ] **SEED-102 · Establish CLI and terminal rendering** · P1
   - **Dependencies** `SEED-101` · **Requirements** `FR-009`, `NFR-004`
   - Add the provisional `seed` entry point and Typer/Rich boundary with help, version, and separate result and diagnostic streams. **Verify.** `uv run seed --help` and `uv run seed --version` succeed. CLI parser tests cover invalid invocation and captured streams.
-- [ ] **SEED-103 · Validate versioned TOML** · P0
+- [x] **SEED-103 · Validate versioned TOML** · P0
   - **Dependencies** `SEED-101` · **Requirements** `FR-001`, `FR-006`, `NFR-003`
   - Implement the TOML loader and Pydantic models with defaults, strict fields, override inputs, and sanitized issues. **Verify.** `uv run pytest tests/unit` covers the documented examples, unsupported versions, unknown keys, incompatible rule parameters, and absent credentials.
+  - **Verified.** Thirteen unit cases passed on Python 3.15, including the documented example, override validation, missing credentials, and redaction.
 - [ ] **SEED-104 · Add idempotent initialization** · P1
   - **Dependencies** `SEED-102`, `SEED-103` · **Requirements** `FR-001`, `FR-009`
   - Add `init` with a validated starter file and exclusive creation. **Verify.** Run `uv run pytest tests/unit`. Repeated `init` leaves original bytes intact and handles an existing symlink or directory safely.
