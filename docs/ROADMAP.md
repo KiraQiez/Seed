@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1–6 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–7 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -148,18 +148,22 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 7 Export
 
-- [ ] **SEED-701 · Publish exports safely** · P0
+- [x] **SEED-701 · Publish exports safely** · P0
   - **Dependencies** `SEED-501` · **Requirements** `FR-008`, `NFR-003`, `NFR-006`
   - Add export directory creation, sanitized paths, manifest publication, and owned cleanup. **Verify.** `uv run pytest tests/unit` covers existing destination, symlink, incomplete output, failed writes, and manifest publication after artifacts close.
-- [ ] **SEED-702 · Serialize CSV and JSON datasets** · P1
+  - **Verified.** Unit tests verified exclusive destinations, symlink refusal, publish-after-close, and cleanup that preserves unowned files.
+- [x] **SEED-702 · Serialize CSV and JSON datasets** · P1
   - **Dependencies** `SEED-701` · **Requirements** `FR-008`, `NFR-001`
   - Stream per-table CSV and the versioned JSON dataset using typed values and stable columns. **Verify.** `uv run pytest tests/unit` checks exact CSV null and multiline handling, JSON decimal and bigint precision, and FK tuple references.
-- [ ] **SEED-703 · Serialize PostgreSQL SQL datasets** · P0
+  - **Verified.** Unit tests verified null and empty text encoding, multiline fields, exact bigint and decimal strings, and explicit keys.
+- [x] **SEED-703 · Serialize PostgreSQL SQL datasets** · P0
   - **Dependencies** `SEED-701`, `SEED-404` · **Requirements** `FR-008`, `NFR-003`
   - Stream transactional INSERT statements with safely typed literals, exact identifiers, and explicit generated-always IDs. **Verify.** `just test-integration` loads a matching empty fixture and checks identities, relationships, quote-heavy values, and absence of destructive statements.
-- [ ] **SEED-704 · Wire export and verify round trips** · P0
+  - **Verified.** PostgreSQL verified enum casting, quoted identifiers and text, generated-always IDs, computed-column omission, and valid child references.
+- [x] **SEED-704 · Wire export and verify round trips** · P0
   - **Dependencies** `SEED-702`, `SEED-703` · **Requirements** `FR-008`, `FR-009`, `NFR-006`
   - Add `export` format dispatch and artifact output, plus round-trip checks for SQL and CSV and JSON relational validation. **Verify.** `just test-e2e` verifies all three formats, preview-to-export prefixes, sequence reconciliation and follow-up inserts, and source database immutability.
+  - **Verified.** Installed CLI tests verified three formats, matching preview and deterministic JSON, both database round trips, sequence reconciliation, and source immutability. All 13 hosted jobs passed. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46084121762)
 
 ### Phase 8 Production readiness
 
