@@ -1,15 +1,15 @@
 """Choose and validate planned generators without producing values."""
 
 from datetime import date, datetime
-from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, DecimalException, localcontext
+from decimal import Decimal, DecimalException
 from uuid import UUID
 
 from seed.config import GeneratorRule, Scalar
 from seed.metadata import ColumnSchema, Metadata, NumericBound
+from seed.numeric import INTEGER_BITS, numeric_grid
 
-_INTEGER_BITS = {"smallint": 16, "integer": 32, "bigint": 64}
 _GENERIC = {
-    **dict.fromkeys(_INTEGER_BITS, "integer"),
+    **dict.fromkeys(INTEGER_BITS, "integer"),
     "numeric": "decimal",
     "text": "text",
     "varchar": "text",
@@ -88,7 +88,7 @@ def _compatible_value(
     value: Scalar, column: ColumnSchema, bounds: tuple[NumericBound, ...]
 ) -> bool:
     kind = column.type
-    if kind.name in _INTEGER_BITS:
+    if kind.name in INTEGER_BITS:
         return type(value) is int and _feasible_numeric(column, None, bounds, Decimal(value))
     if kind.name == "numeric":
         if not isinstance(value, str) and type(value) is not int:
@@ -124,53 +124,4 @@ def _feasible_numeric(
     bounds: tuple[NumericBound, ...],
     value: Decimal | None = None,
 ) -> bool:
-    kind = column.type
-    if value is not None and not value.is_finite():
-        return False
-    lows: list[tuple[Decimal, bool]] = []
-    highs: list[tuple[Decimal, bool]] = []
-    for bound in bounds:
-        number = Decimal(bound.value)
-        if bound.operator in {">", ">=", "="}:
-            lows.append((number, bound.operator == ">"))
-        if bound.operator in {"<", "<=", "="}:
-            highs.append((number, bound.operator == "<"))
-    if rule and rule.min is not None:
-        lows.append((Decimal(rule.min), False))
-    if rule and rule.max is not None:
-        highs.append((Decimal(rule.max), False))
-    if value is not None:
-        lows.append((value, False))
-        highs.append((value, False))
-
-    scale = kind.scale
-    if kind.name in _INTEGER_BITS:
-        limit = 2 ** (_INTEGER_BITS[kind.name] - 1)
-        lows.append((Decimal(-limit), False))
-        highs.append((Decimal(limit - 1), False))
-        scale = 0
-    elif kind.precision is not None and scale is not None:
-        limit_decimal = Decimal((0, (9,) * kind.precision, -scale))
-        lows.append((limit_decimal.copy_negate(), False))
-        highs.append((limit_decimal, False))
-    if not lows or not highs:
-        return True
-    lower, open_lower = max(lows)
-    upper, open_upper = min(highs, key=lambda item: (item[0], not item[1]))
-    if lower > upper or (lower == upper and (open_lower or open_upper)):
-        return False
-    if scale is None:
-        return True
-    try:
-        with localcontext() as context:
-            context.prec = 1100
-            left, right = lower.scaleb(scale), upper.scaleb(scale)
-            first = left.to_integral_value(rounding=ROUND_CEILING) + int(
-                open_lower and left % 1 == 0
-            )
-            last = right.to_integral_value(rounding=ROUND_FLOOR) - int(
-                open_upper and right % 1 == 0
-            )
-        return first <= last
-    except DecimalException:
-        return False
+    return numeric_grid(column, rule, bounds, value) is not None
