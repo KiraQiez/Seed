@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1–7 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–8 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -167,18 +167,22 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 8 Production readiness
 
-- [ ] **SEED-801 · Verify integrated CLI acceptance** · P0
+- [x] **SEED-801 · Verify integrated CLI acceptance** · P0
   - **Dependencies** `SEED-605`, `SEED-704` · **Requirements** `FR-005`, `FR-006`, `FR-007`, `FR-008`, `FR-009`, `NFR-006`
   - Complete the installed CLI suite and CI coverage for the supported PostgreSQL majors. **Verify.** Run `just test-integration` and `just test-e2e` on the documented matrix. Verify counts, errors, and non-mutation properties.
-- [ ] **SEED-802 · Benchmark the reference dataset** · P0
+  - **Verified.** The built wheel passed 22 integration and 8 CLI tests on PostgreSQL 15–19 with Python 3.12, and on PostgreSQL 19 with Python 3.15. All 15 hosted jobs passed. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46084552684)
+- [x] **SEED-802 · Benchmark the reference dataset** · P0
   - **Dependencies** `SEED-801` · **Requirements** `NFR-001`, `NFR-002`
   - Provide a repeatable benchmark fixture and procedure for apply, JSON export, and append measurement. **Verify.** Run the documented three-trial procedure, verify all 26,500 rows and references, and report measured time, peak RSS, and append behavior.
-- [ ] **SEED-803 · Verify portability and package installation** · P0
+  - **Verified.** Three trials on hosted Linux x86-64 with 4 vCPUs, 8 GiB, Python 3.12.16, and PostgreSQL 16.16 verified 26,500 rows with zero broken references. Apply took 2.64 s median and peaked at 108.5 MiB. JSON export took 1.99 s median and peaked at 76.0 MiB. Append took 7.09 s, including 0.33 ms for lock SQL and 1.35 s across 15,042 collision probes. [Benchmark log](https://github.com/KiraQiez/Seed/actions/runs/46084552684/job/140790958414)
+- [x] **SEED-803 · Verify portability and package installation** · P0
   - **Dependencies** `SEED-801` · **Requirements** `NFR-004`, `NFR-005`
   - Exercise builds, interpreter versions, and clean installation smoke checks on Linux, macOS, and Windows. **Verify.** `uv build` succeeds, the sdist rebuilds, and the documented `--version`, `--help`, and `init` checks pass from installed wheels.
-- [ ] **SEED-804 · Complete security and documentation review** · P0
+  - **Verified.** Linux Python 3.12–3.15 and macOS and Windows Python 3.12 and 3.15 passed 89 unit tests and the standalone original and sdist-rebuilt wheel checks. CI records SHA-256 hashes. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46084552684)
+- [x] **SEED-804 · Complete security and documentation review** · P0
   - **Dependencies** `SEED-801`, `SEED-802`, `SEED-803` · **Requirements** `NFR-003`, `NFR-006`
   - Walk through the README and review configuration, redaction, SQL boundaries, lock requirements, and supported capabilities. **Verify.** Record the walkthrough, test evidence, benchmark results, and resolved or approved risks. Verify documentation examples against the released interfaces.
+  - **Verified.** The automated README walkthrough completed in 2.58 s on a pre-migrated fixture. Reviewed and exercised credential redaction, wrong-target refusal, lock contention, re-created table identity, export path ownership, SQL import, and operator sequence reconciliation.
 
 ### Phase 9 Release
 
