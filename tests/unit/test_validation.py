@@ -1,5 +1,6 @@
 """Distinguish successful batches from failed candidate generation."""
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -20,6 +21,9 @@ def test_dataset_failure_keeps_prior_batch_count_and_scoped_ordinal(
 ) -> None:
     config = tmp_path / "seed.toml"
     config.write_text('version=1\n[database]\nurl_env="SEED_TEST_URL"\n', encoding="utf-8")
+    for key in os.environ.copy():
+        if key.upper().startswith("PG"):
+            monkeypatch.delenv(key)
     monkeypatch.setenv("SEED_TEST_URL", "postgresql://test:private-password@127.0.0.1/test")
     schema = sample("items")
     table = schema.tables[0].model_copy(update={"columns": (column("id"),)})
