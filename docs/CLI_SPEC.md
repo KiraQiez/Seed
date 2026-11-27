@@ -70,7 +70,7 @@ public.customers  1 sample of 1000 planned rows
 email generator: email
 email: alex-4vj2@example.com
 $ seed apply --yes --json
-{"version":1,"command":"apply","ok":false,"data":null,"issues":[{"code":"TARGET_MISMATCH","severity":"error","message":"Connected database does not match the configured write target."}]}
+{"version":1,"command":"apply","ok":false,"data":{"dry_run":false,"plan":null,"insertion":{"outcome":"not_started"}},"issues":[{"code":"TARGET_MISMATCH","severity":"error","message":"Connected database does not match the configured write target."}]}
 ```
 
 The JSON example exits with status `5`. The preview's exact displayed columns and generated values depend on the inspected table and configuration.

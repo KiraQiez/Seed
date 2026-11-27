@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1–5 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–6 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -125,21 +125,26 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 6 Safe database insertion
 
-- [ ] **SEED-601 · Implement apply preflight and confirmation** · P0
+- [x] **SEED-601 · Implement apply preflight and confirmation** · P0
   - **Dependencies** `SEED-503` · **Requirements** `FR-007`, `FR-009`, `NFR-003`
   - Add target verification, existence probes, target summary, dry-run, and per-invocation confirmation handling. **Verify.** `just test-integration` checks environment and target mismatches, non-empty refusals, and unchanged state after dry-run. CLI tests cover TTY, decline, EOF, and `--yes`.
-- [ ] **SEED-602 · Lock targets and recheck approved plans** · P0
+  - **Verified.** Unit, integration, and CLI tests covered target mismatches, read-only preflight, unchanged rows and sequences on refusal, and terminal and non-interactive confirmation.
+- [x] **SEED-602 · Lock targets and recheck approved plans** · P0
   - **Dependencies** `SEED-601` · **Requirements** `FR-007`, `NFR-003`
   - Implement strict lock acquisition, timeout, role checks, and post-confirmation checks of schema and table state. **Verify.** `just test-integration` uses two connections to verify write blocking, changed state, missing permissions, timeout, and safe refusal before insertion.
-- [ ] **SEED-603 · Insert batches and report transaction outcomes** · P0
+  - **Verified.** Integration tests covered contention, lock permissions, changed schema and table state, connection loss, and replication overrides.
+- [x] **SEED-603 · Insert batches and report transaction outcomes** · P0
   - **Dependencies** `SEED-602`, `SEED-405` · **Requirements** `FR-007`, `NFR-006`
   - Add ordered parameterized inserts, live identity capture, one transaction, rollback, and outcome reporting. **Verify.** `just test-integration` checks live parent keys and rollback of earlier batches. Simulate unknown commit acknowledgement and confirm counts and replay are suppressed.
-- [ ] **SEED-604 · Implement guarded append and parent reuse** · P0
+  - **Verified.** Integration tests matched children to PostgreSQL-assigned keys and confirmed rollback of earlier batches. Unit tests simulated lost commit acknowledgement and verified that no counts or retry followed.
+- [x] **SEED-604 · Implement guarded append and parent reuse** · P0
   - **Dependencies** `SEED-603` · **Requirements** `FR-004`, `FR-007`, `NFR-002`, `NFR-003`
   - Add bounded existing key pools and indexed, typed collision probes under the apply transaction. **Verify.** `just test-integration` verifies independently opted-in append and reuse, null comparison, bounded lookups, and rollback when a reused key disappears.
-- [ ] **SEED-605 · Expose the complete apply workflow** · P0
+  - **Verified.** Integration tests covered independent append and reuse settings, ordered key pool bounds, PostgreSQL null uniqueness semantics, and rollback when a reused key disappeared.
+- [x] **SEED-605 · Expose the complete apply workflow** · P0
   - **Dependencies** `SEED-604` · **Requirements** `FR-007`, `FR-009`, `NFR-006`
   - Wire the apply CLI to preflight, confirmation, guarded execution, and safe result rendering. **Verify.** `just test-e2e` covers successful empty-target apply, confirmed append, non-interactive invocation, refusal, and failure with no misleading row counts.
+  - **Verified.** `just check` passed all 83 unit tests. The integration and installed CLI suites passed 25 tests locally. The wheel and source distribution built, and `seed apply --help` ran from the isolated wheel. All 13 hosted jobs passed, including PostgreSQL 15–19. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46083294569)
 
 ### Phase 7 Export
 
