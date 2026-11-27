@@ -39,28 +39,23 @@ jobs:
       - run: uv run --locked ruff format --check .
       - run: uv run --locked mypy src tests
       - run: uv run --locked pytest tests/unit
-      - run: uv build
-      - name: Smoke-test the built wheel
-        shell: bash
-        run: |
-          wheel=("$PWD"/dist/*.whl)
-          temp_dir="$(mktemp -d)"
-          cd "$temp_dir"
-          uv run --isolated --no-project --with "${wheel[0]}" seed --help
-          uv run --isolated --no-project --with "${wheel[0]}" seed --version
-          uv run --isolated --no-project --with "${wheel[0]}" seed init --json
+      - run: uv build --sdist --wheel
+      - run: uv run --locked python tests/package_smoke.py dist
 
   integration:
-    name: PostgreSQL ${{ matrix.postgres }} integration
+    name: PostgreSQL ${{ matrix.postgres }} on Python ${{ matrix.python }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
         postgres: ["15", "16", "17", "18", "19"]
+        python: ["3.12"]
+        include:
+          - {postgres: "19", python: "3.15"}
     env:
       SEED_TEST_POSTGRES_MAJOR: ${{ matrix.postgres }}
-      UV_PYTHON: "3.12"
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
