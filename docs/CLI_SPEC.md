@@ -1,6 +1,6 @@
 # CLI specification
 
-The following interface is planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
+Phase 1 implements help, version, and `init`; the remaining commands are planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
 
 ## Commands
 
@@ -55,7 +55,7 @@ Use the following `data` payloads. Their component fields and typed values are d
 | `3` | Connection or authentication error before writing | `CONNECTION_FAILED`, `CONNECTION_TIMEOUT` |
 | `4` | Schema, plan, generator, or dataset rejected | `UNSUPPORTED_CONSTRAINT`, `DEPENDENCY_CYCLE`, `RETRY_EXHAUSTED` |
 | `5` | Safety refusal or declined confirmation | `TARGET_MISMATCH`, `TARGET_NOT_EMPTY`, `LOCK_UNAVAILABLE`, `CONFIRMATION_REQUIRED`, `CANCELLED`, `NO_ROWS_PLANNED` |
-| `6` | Execution, file, or commit outcome error | `INSERT_FAILED`, `COMMIT_OUTCOME_UNKNOWN`, `OUTPUT_EXISTS`, `EXPORT_FAILED` |
+| `6` | Execution, file, or commit outcome error | `INSERT_FAILED`, `COMMIT_OUTCOME_UNKNOWN`, `OUTPUT_EXISTS`, `EXPORT_FAILED`, `INIT_FAILED` |
 | `130` | Interrupted with a known pre-commit outcome | `INTERRUPTED` |
 
 An interrupted or failed commit with unknown outcome uses `6`. After an acknowledged commit, the outcome is `committed` even if rendering subsequently fails. If an error occurs after a write starts, report the known outcome without exposing input values. Record additional specific issue codes alongside their introducing feature.

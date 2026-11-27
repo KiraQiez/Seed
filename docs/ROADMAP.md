@@ -34,9 +34,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
   - **Dependencies** `SEED-101` · **Requirements** `FR-001`, `FR-006`, `NFR-003`
   - Implement the TOML loader and Pydantic models with defaults, strict fields, override inputs, and sanitized issues. **Verify.** `uv run pytest tests/unit` covers the documented examples, unsupported versions, unknown keys, incompatible rule parameters, and absent credentials.
   - **Verified.** Thirteen unit cases passed on Python 3.15, including the documented example, override validation, missing credentials, and redaction.
-- [ ] **SEED-104 · Add idempotent initialization** · P1
+- [x] **SEED-104 · Add idempotent initialization** · P1
   - **Dependencies** `SEED-102`, `SEED-103` · **Requirements** `FR-001`, `FR-009`
   - Add `init` with a validated starter file and exclusive creation. **Verify.** Run `uv run pytest tests/unit`. Repeated `init` leaves original bytes intact and handles an existing symlink or directory safely.
+  - **Verified.** Twenty-one unit cases passed on Python 3.15, including concurrent publication, idempotence, JSON output, and symlink and directory refusal.
 - [ ] **SEED-105 · Establish developer quality gates** · P0
   - **Dependencies** `SEED-102`, `SEED-103` · **Requirements** `NFR-004`, `NFR-005`
   - Configure pytest, Ruff, Mypy, Just, and GitHub Actions for lint, typing, unit tests, and builds. **Verify.** Run the documented direct quality commands and their Just equivalents. CI exercises the planned Python matrix with no database required.

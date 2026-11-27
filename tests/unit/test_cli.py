@@ -33,3 +33,19 @@ def test_unrecognized_input_uses_redacted_stderr() -> None:
     assert completed.stdout == ""
     assert "Invalid command or options" in completed.stderr
     assert "private-value" not in completed.stderr
+
+
+def test_init_json() -> None:
+    from json import loads
+    from tempfile import TemporaryDirectory
+
+    with TemporaryDirectory() as directory:
+        for created in (True, False):
+            completed = run_cli("init", "--config", f"{directory}/seed.toml", "--json", "--verbose")
+            assert completed.returncode == 0
+            assert loads(completed.stdout)["data"]["created"] is created
+            assert completed.stderr
+
+        refused = run_cli("init", "--config", directory, "--json")
+        assert refused.returncode == 6
+        assert loads(refused.stdout)["issues"][0]["code"] == "INIT_FAILED"
