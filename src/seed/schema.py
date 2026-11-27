@@ -36,9 +36,15 @@ from seed.metadata import (
 )
 
 
-def reflect_schema(connection: Connection, url: URL, schema_name: str) -> Inspection:
-    """Reflect one exact user schema from an already read-only transaction."""
-    if connection.scalar(text("SHOW transaction_read_only")) != "on":
+def reflect_schema(
+    connection: Connection,
+    url: URL,
+    schema_name: str,
+    *,
+    require_read_only: bool = True,
+) -> Inspection:
+    """Reflect a schema from a read-only snapshot or a guarded write transaction."""
+    if require_read_only and connection.scalar(text("SHOW transaction_read_only")) != "on":
         raise DatabaseError(
             "SCHEMA_INSPECTION_FAILED", "Inspection requires a read-only session.", 4
         )

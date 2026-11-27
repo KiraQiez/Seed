@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from sqlalchemy import URL, Connection, text
+from sqlalchemy.engine import Transaction
 from sqlalchemy.exc import SAWarning, SQLAlchemyError
 
 from seed.config import ConfigError, SeedConfig
@@ -97,11 +98,19 @@ def apply_preflight(
         raise ApplyError("PREFLIGHT_FAILED", "Could not verify the target for apply.") from None
 
 
-def inspect_for_apply(connection: Connection, url: URL, config: SeedConfig) -> Inspection:
+def inspect_for_apply(
+    connection: Connection,
+    url: URL,
+    config: SeedConfig,
+    *,
+    require_read_only: bool = True,
+) -> Inspection:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", SAWarning)
         try:
-            return reflect_schema(connection, url, config.database.schema_name)
+            return reflect_schema(
+                connection, url, config.database.schema_name, require_read_only=require_read_only
+            )
         except (LookupError, ValueError, NotImplementedError):
             raise ApplyError(
                 "SCHEMA_INSPECTION_FAILED", "PostgreSQL metadata could not be normalized.", 4
@@ -180,3 +189,81 @@ def confirm_apply(*, yes: bool, interactive: bool, prompt: Callable[[], str]) ->
         answer = ""
     if answer.strip().lower() not in {"y", "yes"}:
         raise ApplyError("CANCELLED", "Apply was not confirmed.")
+
+
+def begin_guarded_write(
+    connection: Connection,
+    url: URL,
+    config: SeedConfig,
+    request: PlanRequest,
+    approved: ApprovedPlan,
+) -> Transaction:
+    """Start one transaction and hold each required lock before returning."""
+    check_target(config, url)
+    if connection.closed or connection.invalidated or connection.in_transaction():
+        raise ApplyError("TARGET_CHANGED", "The approved connection is no longer available.")
+    try:
+        connection.execution_options(isolation_level="READ COMMITTED", postgresql_readonly=False)
+        transaction = connection.begin()
+    except SQLAlchemyError:
+        raise ApplyError(
+            "TARGET_CHANGED", "The approved connection is no longer available."
+        ) from None
+    try:
+        _lock_and_recheck(connection, url, config, request, approved)
+    except (Exception, KeyboardInterrupt):
+        rollback(transaction)
+        raise
+    return transaction
+
+
+def _lock_and_recheck(
+    connection: Connection,
+    url: URL,
+    config: SeedConfig,
+    request: PlanRequest,
+    approved: ApprovedPlan,
+) -> None:
+    try:
+        connection.execute(text("SET LOCAL search_path TO pg_catalog"))
+        connection.execute(text("SET LOCAL lock_timeout TO '5s'"))
+        connection.execute(text("SET LOCAL statement_timeout TO '60s'"))
+        if backend_identity(connection) != approved.backend:
+            raise ApplyError("TARGET_CHANGED", "The approved connection is no longer available.")
+        check_server(connection, url)
+        if connection.scalar(text("SHOW transaction_read_only")) != "off":
+            raise ApplyError("READ_ONLY_TARGET", "The target connection is read-only.")
+    except SQLAlchemyError:
+        raise ApplyError("TARGET_CHANGED", "Could not recheck the approved connection.") from None
+
+    locks = dict.fromkeys(approved.reused_parents, "ACCESS SHARE")
+    locks.update(dict.fromkeys(approved.targets, "SHARE ROW EXCLUSIVE"))
+    try:
+        for relation in sorted(locks, key=lambda table: (table.schema_name, table.table)):
+            connection.execute(
+                text(f"LOCK TABLE ONLY {qualified(connection, relation)} IN {locks[relation]} MODE")
+            )
+    except SQLAlchemyError:
+        raise ApplyError(
+            "LOCK_UNAVAILABLE", "Could not acquire all required table locks."
+        ) from None
+
+    try:
+        check_server(connection, url)
+        current = inspect_for_apply(connection, url, config, require_read_only=False)
+        if current != approved.inspection:
+            raise ApplyError("TARGET_CHANGED", "Schema metadata changed after preflight.")
+        plan = build_plan(config, current.schema, request.filters, request.rows)
+        if plan != approved.plan:
+            raise ApplyError("PLAN_CHANGED", "The generation plan changed after preflight.")
+        check_empty_targets(connection, config, approved)
+    except SQLAlchemyError:
+        raise ApplyError("PREFLIGHT_FAILED", "Could not recheck the locked target.") from None
+
+
+def rollback(transaction: Transaction) -> None:
+    """Try to release an uncommitted transaction without exposing driver details."""
+    try:
+        transaction.rollback()
+    except SQLAlchemyError:
+        pass
