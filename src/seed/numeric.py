@@ -112,6 +112,8 @@ def numeric_grid(
 
 def _units(bound: tuple[Decimal, bool], scale: int, lower: bool) -> int:
     value, exclusive = bound
+    if value and value.adjusted() + scale < 0:
+        return int(value > 0) if lower else -int(value < 0)
     with localcontext() as context:
         context.prec = max(len(value.as_tuple().digits), value.adjusted() + scale + 1) + 2
         scaled = value.scaleb(scale)

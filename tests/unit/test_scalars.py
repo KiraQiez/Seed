@@ -63,3 +63,35 @@ def test_temporal_window_and_declared_timestamp_precision() -> None:
         <= day
         <= SETTINGS.reference_time.date()
     )
+
+
+def test_semantic_bindings_and_reserved_contact_values() -> None:
+    from seed.bindings import choose_binding
+
+    context = RunContext(SETTINGS, TABLE)
+    email = column("email_address", "varchar").model_copy(
+        update={"type": ColumnType(name="varchar", supported=True, length=13)}
+    )
+    choice, compatible = choose_binding(email, None, "en_US", ())
+    assert compatible and choice.generator == "email"
+    value = scalar_value(context, email, "email", None)
+    assert isinstance(value, str) and value.endswith("@example.com") and len(value) == 13
+    phone = column("phone_number", "text")
+    assert choose_binding(phone, None, "en_GB", ())[0].generator == "text"
+    narrow_phone = phone.model_copy(
+        update={
+            "type": ColumnType(name="varchar", supported=True, length=9),
+        }
+    )
+    assert choose_binding(narrow_phone, None, "en_US", ())[0].generator == "text"
+    assert not choose_binding(narrow_phone, GeneratorRule(generator="phone"), "en_US", ())[1]
+    assert str(scalar_value(context, phone, "phone", None)).startswith("+1-202-555-01")
+    assert scalar_value(context, column("first_name", "text"), "first_name", None)
+
+
+def test_explicit_choices_and_constants_are_typed() -> None:
+    context = RunContext(SETTINGS, TABLE)
+    explicit = GeneratorRule(generator="choice", values=["only"])
+    assert scalar_value(context, column("first_name", "text"), "choice", explicit) == "only"
+    number = GeneratorRule(generator="constant", value="2.70")
+    assert scalar_value(context, column("amount", "numeric"), "constant", number) == Decimal("2.70")

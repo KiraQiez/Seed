@@ -1,6 +1,6 @@
 """Choose and validate planned generators without producing values."""
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal, DecimalException
 from uuid import UUID
 
@@ -48,7 +48,9 @@ def choose_binding(
     kind = column.type
     generic = _GENERIC.get(kind.name)
     inferred = _SEMANTIC.get(column.name.lower()) if generic == "text" else None
-    if inferred == "phone" and locale != "en_US":
+    if inferred == "phone" and (
+        locale != "en_US" or (kind.length is not None and kind.length < 15)
+    ):
         inferred = None
     if inferred == "email" and kind.length is not None and kind.length < 13:
         inferred = None
@@ -61,7 +63,9 @@ def choose_binding(
         return binding, False
     if rule and rule.null_rate and not column.nullable:
         return binding, False
-    if explicit == "phone" and locale != "en_US":
+    if explicit == "phone" and (
+        locale != "en_US" or (kind.length is not None and kind.length < 15)
+    ):
         return binding, False
     if explicit == "email" and kind.length is not None and kind.length < 13:
         return binding, False
@@ -114,7 +118,15 @@ def _compatible_value(
     if kind.name == "date":
         return type(value) is date
     if kind.name == "timestamp" and isinstance(value, datetime):
-        return (value.utcoffset() is not None) == bool(kind.timezone)
+        aware = value.utcoffset() is not None
+        if aware != bool(kind.timezone):
+            return False
+        try:
+            normalized = value.astimezone(UTC) if aware else value
+        except OverflowError:
+            return False
+        precision = kind.precision if kind.precision is not None else 6
+        return bool(normalized.microsecond % (10 ** (6 - precision)) == 0)
     return False
 
 
