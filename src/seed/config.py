@@ -18,9 +18,24 @@ type Rows = Annotated[int, Field(ge=0, le=100_000)]
 type Probability = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
 type Scalar = str | bool | int | date | datetime
 type Generator = Literal[
-    "integer", "decimal", "boolean", "text", "date", "datetime", "uuid",
-    "choice", "constant", "email", "phone", "first_name", "last_name",
-    "name", "address", "city", "country", "description",
+    "integer",
+    "decimal",
+    "boolean",
+    "text",
+    "date",
+    "datetime",
+    "uuid",
+    "choice",
+    "constant",
+    "email",
+    "phone",
+    "first_name",
+    "last_name",
+    "name",
+    "address",
+    "city",
+    "country",
+    "description",
 ]
 
 
@@ -117,7 +132,9 @@ class GeneratorRule(ConfigModel):
         if (self.value is not None) != (self.generator == "constant"):
             raise ValueError("The constant generator requires a value")
         if self.generator == "choice":
-            if not self.values or len({(type(value), value) for value in self.values}) != len(self.values):
+            if not self.values or len({(type(value), value) for value in self.values}) != len(
+                self.values
+            ):
                 raise ValueError("The choice generator requires distinct values")
         elif self.values is not None:
             raise ValueError("Values are only valid with the choice generator")
@@ -172,15 +189,19 @@ def parse_config(
     try:
         return SeedConfig(
             version=config.version,
-            database=DatabaseConfig.model_validate({
-                **config.database.model_dump(by_alias=True),
-                **({"schema": schema} if schema is not None else {}),
-            }),
-            generation=GenerationConfig.model_validate({
-                **config.generation.model_dump(),
-                **({"locale": locale} if locale is not None else {}),
-                **({"random_seed": random_seed} if random_seed is not None else {}),
-            }),
+            database=DatabaseConfig.model_validate(
+                {
+                    **config.database.model_dump(by_alias=True),
+                    **({"schema": schema} if schema is not None else {}),
+                }
+            ),
+            generation=GenerationConfig.model_validate(
+                {
+                    **config.generation.model_dump(),
+                    **({"locale": locale} if locale is not None else {}),
+                    **({"random_seed": random_seed} if random_seed is not None else {}),
+                }
+            ),
             safety=config.safety,
             tables=config.tables,
             rules=config.rules,
@@ -203,7 +224,9 @@ def resolve_database_url(config: SeedConfig, environ: Mapping[str, str] | None =
     values = os.environ if environ is None else environ
     url = values.get(config.database.url_env, "")
     if not url.strip():
-        raise ConfigError("The environment variable configured by database.url_env is missing or empty.")
+        raise ConfigError(
+            "The environment variable configured by database.url_env is missing or empty."
+        )
     return url
 
 

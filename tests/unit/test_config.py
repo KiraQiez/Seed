@@ -29,18 +29,21 @@ def test_overrides() -> None:
     assert config.generation.locale == "en_GB"
 
 
-@pytest.mark.parametrize("text", [
-    STARTER.replace("= 1", "= 2"),
-    STARTER.replace("= 1", "= true"),
-    'version = 1\nunknown = "private-value"\n[database]\nurl_env = "DATABASE_URL"\n',
-    STARTER + 'password = "private-value"\n',
-    STARTER + '[generation]\nlocale = "private-value"\n',
-    STARTER + '[rules.users.age]\ngenerator = "integer"\nmin = "private-value"\n',
-    STARTER + '[rules.users.age]\ngenerator = "decimal"\nmin = "NaN"\n',
-    STARTER + '[rules.users.age]\ngenerator = "choice"\nvalues = [1, 1]\n',
-    STARTER + '[tables.users]\nreuse_existing = true\n',
-    STARTER + 'broken = "private-value\n',
-])
+@pytest.mark.parametrize(
+    "text",
+    [
+        STARTER.replace("= 1", "= 2"),
+        STARTER.replace("= 1", "= true"),
+        'version = 1\nunknown = "private-value"\n[database]\nurl_env = "DATABASE_URL"\n',
+        STARTER + 'password = "private-value"\n',
+        STARTER + '[generation]\nlocale = "private-value"\n',
+        STARTER + '[rules.users.age]\ngenerator = "integer"\nmin = "private-value"\n',
+        STARTER + '[rules.users.age]\ngenerator = "decimal"\nmin = "NaN"\n',
+        STARTER + '[rules.users.age]\ngenerator = "choice"\nvalues = [1, 1]\n',
+        STARTER + "[tables.users]\nreuse_existing = true\n",
+        STARTER + 'broken = "private-value\n',
+    ],
+)
 def test_invalid_input_is_redacted(text: str) -> None:
     with pytest.raises(ConfigError) as error:
         parse_config(text)
@@ -53,4 +56,7 @@ def test_credentials_are_separate_from_loading(tmp_path: Path) -> None:
     config = load_config(path)
     with pytest.raises(ConfigError, match="missing or empty"):
         resolve_database_url(config, {})
-    assert resolve_database_url(config, {"DATABASE_URL": "value-from-environment"}) == "value-from-environment"
+    assert (
+        resolve_database_url(config, {"DATABASE_URL": "value-from-environment"})
+        == "value-from-environment"
+    )

@@ -4,7 +4,9 @@
 
 Seed is a planned open-source CLI for populating development and test databases with realistic synthetic data. It inspects a PostgreSQL schema, plans parent-first generation, and lets developers and QA teams review the results before applying or exporting them.
 
-**Status.** Product and architecture planning. The examples describe the proposed CLI. Phase 1 starts after planning review.
+**Status.** The Python foundation is available from source. It provides help, version, and starter configuration creation. Database features are planned.
+
+Run `just setup` and then `uv run seed --help` or `uv run seed init`.
 
 ## Planned workflow
 

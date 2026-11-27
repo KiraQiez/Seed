@@ -6,7 +6,7 @@ Phase 1 implements help, version, and `init`; the remaining commands are planned
 
 | Command | Specific options | Result |
 |---|---|---|
-| `seed init` | Common options only | Create a starter configuration with no embedded credentials. Use exclusive creation. An existing regular file yields `created: false`; directories and symlinks yield a file error. |
+| `seed init` | Common options only | Create a starter configuration with no embedded credentials. Publish the complete file exclusively on filesystems that support hard links. An existing regular file yields `created: false`; directories and symlinks yield a file error. |
 | `seed inspect` | `--schema NAME`, repeatable `--table NAME` | Show tables, columns, types, PKs, FKs, defaults and constraints, and their capability classifications. Inspect filters the display without expanding parents. |
 | `seed plan` | Selection and generation overrides | Report requested and required tables, counts, key sources, dependency order, generators, operation-specific compatibility, and warnings. |
 | `seed preview` | Selection and generation overrides, `--limit N` | Generate an offline sample and show its plan and validation issues. Show up to `N` rows per explicitly selected table, default 5 and maximum 100. Parent rows required for correct key pools are generated as needed. |

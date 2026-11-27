@@ -34,13 +34,14 @@ def diagnostic(message: str) -> None:
 
 @app.callback()
 def root(
-    version: bool = typer.Option(False, "--version", is_eager=True, help="Show the package version."),
+    version: bool = typer.Option(
+        False, "--version", is_eager=True, help="Show the package version."
+    ),
 ) -> None:
     """Work with Seed configurations and datasets."""
     if version:
         result(__version__)
         raise typer.Exit()
-
 
 
 @app.command()
@@ -49,7 +50,9 @@ def init(
         "./seed.toml"
     ),
     as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose", help="Show additional diagnostics.")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", help="Show additional diagnostics.")
+    ] = False,
 ) -> None:
     """Create a starter configuration."""
     try:
@@ -57,13 +60,17 @@ def init(
     except (OSError, ConfigError) as error:
         code = "CONFIG_INVALID" if isinstance(error, ConfigError) else "INIT_FAILED"
         if as_json:
-            typer.echo(json.dumps({
-                "version": 1,
-                "command": "init",
-                "ok": False,
-                "data": None,
-                "issues": [{"code": code, "severity": "error", "message": str(error)}],
-            }))
+            typer.echo(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "command": "init",
+                        "ok": False,
+                        "data": None,
+                        "issues": [{"code": code, "severity": "error", "message": str(error)}],
+                    }
+                )
+            )
         else:
             diagnostic(str(error))
         raise typer.Exit(2 if isinstance(error, ConfigError) else 6) from None
@@ -71,13 +78,17 @@ def init(
     if verbose:
         diagnostic("Created a starter configuration." if created else "Existing file preserved.")
     if as_json:
-        typer.echo(json.dumps({
-            "version": 1,
-            "command": "init",
-            "ok": True,
-            "data": {"path": str(config), "created": created},
-            "issues": [],
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "version": 1,
+                    "command": "init",
+                    "ok": True,
+                    "data": {"path": str(config), "created": created},
+                    "issues": [],
+                }
+            )
+        )
     else:
         result("Created seed configuration." if created else "Seed configuration already exists.")
 

@@ -4,13 +4,15 @@
 
 Use uv for the locked contributor environment, Hatchling for wheels and source distributions, pytest for tests, Ruff for linting and formatting, Mypy for typing, Just for recipes, and GitHub Actions for CI. Keep development tools out of the runtime package. Record runtime versions that affect deterministic data during releases.
 
-| Check | Planned command |
+Run `just setup` to sync the lockfile. Run `just check` for lock consistency, lint, formatting, types, and unit tests, and `just build` to build a wheel and sdist.
+
+| Check | Command |
 |---|---|
 | Lint and format | `uv run ruff check .` and `uv run ruff format --check .` |
 | Types | `uv run mypy src tests` |
 | Unit | `uv run pytest tests/unit` |
-| PostgreSQL integration | `just test-integration` |
-| Installed CLI workflows | `just test-e2e` |
+| PostgreSQL integration | Planned `just test-integration` |
+| Installed database CLI workflows | Planned `just test-e2e` |
 | Build and smoke test | `uv build`, then install the wheel in isolation and run `seed --version`, `seed --help`, and `seed init` |
 
 Linux CI exercises Python 3.12–3.15 and PostgreSQL 15–19 on current supported patch releases. Run full end-to-end checks on minimum and latest combinations. macOS and Windows run portable checks, builds, and clean installation smoke tests. Review platform-specific driver requirements and upstream support before each release. [Python version status](https://devguide.python.org/versions/) · [PostgreSQL version policy](https://www.postgresql.org/support/versioning/)
