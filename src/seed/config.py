@@ -210,13 +210,19 @@ def parse_config(
         raise _safe_validation_error(error) from None
 
 
-def load_config(path: Path) -> SeedConfig:
+def load_config(
+    path: Path,
+    *,
+    schema: str | None = None,
+    locale: str | None = None,
+    random_seed: int | None = None,
+) -> SeedConfig:
     """Read and validate a UTF-8 configuration file."""
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         raise ConfigError("Could not read the UTF-8 configuration file.") from None
-    return parse_config(text)
+    return parse_config(text, schema=schema, locale=locale, random_seed=random_seed)
 
 
 def resolve_database_url(config: SeedConfig, environ: Mapping[str, str] | None = None) -> str:

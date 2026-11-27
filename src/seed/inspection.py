@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sqlalchemy.exc import SAWarning
 
-from seed.config import load_config, resolve_database_url
+from seed.config import SeedConfig, load_config, resolve_database_url
 from seed.database import DatabaseError, parse_database_url, read_session
 from seed.metadata import DatabaseSchema
 from seed.schema import reflect_schema
@@ -50,15 +50,7 @@ def inspect_database(
         raise DatabaseError("INVALID_SCHEMA", "Use a valid PostgreSQL schema name.", 4)
     schema_name = config.database.schema_name if schema_override is None else schema_override
     names = requested_tables(schema_name, filters)
-    url = parse_database_url(resolve_database_url(config))
-    with read_session(url, config.database) as connection, warnings.catch_warnings():
-        warnings.simplefilter("ignore", SAWarning)
-        try:
-            report = reflect_schema(connection, url, schema_name).schema
-        except (ValueError, LookupError, NotImplementedError):
-            raise DatabaseError(
-                "SCHEMA_INSPECTION_FAILED", "PostgreSQL metadata could not be normalized.", 4
-            ) from None
+    report = read_schema(config, schema_name)
     if not names:
         return report
     tables = tuple(table for table in report.tables if table.id.table in names)
@@ -67,3 +59,16 @@ def inspect_database(
             "TABLE_UNAVAILABLE", "A requested table was not found in the selected schema.", 4
         )
     return report.model_copy(update={"tables": tables})
+
+
+def read_schema(config: SeedConfig, schema_name: str) -> DatabaseSchema:
+    """Read a complete schema through the shared redaction boundary."""
+    url = parse_database_url(resolve_database_url(config))
+    with read_session(url, config.database) as connection, warnings.catch_warnings():
+        warnings.simplefilter("ignore", SAWarning)
+        try:
+            return reflect_schema(connection, url, schema_name).schema
+        except (ValueError, LookupError, NotImplementedError):
+            raise DatabaseError(
+                "SCHEMA_INSPECTION_FAILED", "PostgreSQL metadata could not be normalized.", 4
+            ) from None
