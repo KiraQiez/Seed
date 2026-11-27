@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:${SEED_TEST_POSTGRES_MAJOR:?}
+    environment:
+      POSTGRES_DB: ${SEED_FIXTURE_DATABASE:?}
+      POSTGRES_USER: seed_fixture
+      POSTGRES_PASSWORD: ${SEED_FIXTURE_PASSWORD:?}
+    ports:
+      - "127.0.0.1::5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U seed_fixture -d \"$$POSTGRES_DB\""]
+      interval: 1s
+      timeout: 3s
+      retries: 60

@@ -10,3 +10,6 @@ check:
 
 build:
     uv build
+
+test-integration:
+    uv run --locked pytest tests/integration

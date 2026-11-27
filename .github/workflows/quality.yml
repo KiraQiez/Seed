@@ -49,3 +49,24 @@ jobs:
           uv run --isolated --no-project --with "${wheel[0]}" seed --help
           uv run --isolated --no-project --with "${wheel[0]}" seed --version
           uv run --isolated --no-project --with "${wheel[0]}" seed init --json
+
+  integration:
+    name: PostgreSQL ${{ matrix.postgres }} integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ["15", "16", "17", "18", "19"]
+    env:
+      SEED_TEST_POSTGRES_MAJOR: ${{ matrix.postgres }}
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.13.9'
+      - run: uv sync --locked
+      - run: uv run --locked pytest tests/integration
