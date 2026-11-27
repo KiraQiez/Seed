@@ -17,6 +17,7 @@ from seed.inspection import inspect_database
 from seed.inspection_output import inspection_lines
 from seed.plan_output import plan_issues, plan_lines
 from seed.planning import PlanRequest, plan_database
+from seed.preview import preview as preview_request
 from seed.validation import validate as validate_request
 
 app = typer.Typer(
@@ -275,6 +276,44 @@ def validate(
             result(f"{name} · {stage.status}{count}")
         for issue in report.issues():
             diagnostic(f"{issue['code']} · {issue['message']}")
+    if report.status:
+        raise typer.Exit(report.status)
+
+
+@app.command()
+def preview(
+    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
+        "./seed.toml"
+    ),
+    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
+    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
+    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
+    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
+    locale: Annotated[str | None, typer.Option("--locale")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+    limit: Annotated[int, typer.Option("--limit", help="Rows to show per requested table.")] = 5,
+) -> None:
+    """Show an offline sample from a read-only schema snapshot."""
+    report = preview_request(
+        PlanRequest(config, schema, table or [], rows, locale, random_seed), limit
+    )
+    if verbose:
+        diagnostic("Completed offline preview.")
+    if as_json:
+        _json_response("preview", report.status, report.payload(), list(report.issues))
+    else:
+        lines = plan_lines(report.plan) if report.plan is not None else []
+        for sample in report.tables:
+            name = json.dumps(sample.table.table)
+            lines.append(f"{name} · {len(sample.rows)} sampled rows")
+            lines.append("  " + " | ".join(json.dumps(column.name) for column in sample.columns))
+            lines.extend("  " + json.dumps(row) for row in sample.rows)
+        if lines:
+            result("\n".join(lines))
+        if report.status:
+            for issue in report.issues:
+                diagnostic(f"{issue['code']} · {issue['message']}")
     if report.status:
         raise typer.Exit(report.status)
 

@@ -111,3 +111,76 @@ def test_validate_distinguishes_stage_status_counts_and_safe_errors(
     statuses(finite, 4, ("passed", "passed", "failed"))
     assert json.loads(finite.stdout)["issues"][0]["code"] == "DOMAIN_EXHAUSTED"
     assert postgres.sql(query) == before
+
+
+def test_preview_samples_match_full_rows_and_preserve_composite_parent_pools(
+    postgres: PostgresFixture,
+    tmp_path: Path,
+) -> None:
+    from test_schema import snapshot
+
+    from seed.config import load_config
+    from seed.dataset import dataset_columns, dataset_row
+    from seed.generation import generate_batches
+    from seed.planning import build_plan
+
+    postgres.sql("""
+        CREATE SCHEMA preview_seed;
+        CREATE TABLE preview_seed.parent (
+            id bigint GENERATED ALWAYS AS IDENTITY,
+            code text NOT NULL,
+            PRIMARY KEY (id, code)
+        );
+        CREATE TABLE preview_seed.child (
+            parent_id bigint NOT NULL, parent_code text NOT NULL,
+            FOREIGN KEY (parent_id, parent_code) REFERENCES preview_seed.parent (id, code),
+            amount numeric(6, 2) NOT NULL CHECK (amount > 3.00 AND amount < 3.02),
+            computed numeric GENERATED ALWAYS AS (amount * 2) STORED
+        );
+        CREATE TABLE preview_seed.empty (id integer);
+        CREATE TABLE preview_seed.blocked (id integer CHECK (abs(id) > 2));
+    """)
+    query = """
+        SELECT (SELECT count(*) FROM preview_seed.child), last_value, is_called
+        FROM preview_seed.parent_id_seq
+    """
+    before = postgres.sql(query)
+    path = tmp_path / "seed.toml"
+    path.write_text(
+        'version=1\n[database]\nurl_env="SEED_TEST_URL"\nschema="preview_seed"\n'
+        "[generation]\nnull_rate=0\n[tables.parent]\nrows=6\n[tables.child]\nrows=7\n"
+        "[tables.empty]\nrows=0\n",
+        encoding="utf-8",
+    )
+    opts = ("--limit", "2", "--json")
+    actual = invoke("preview", path, postgres.url, *opts)
+    assert actual.returncode == 0, actual.stderr
+    assert actual.stdout == invoke("preview", path, postgres.url, *opts).stdout
+    payload = json.loads(actual.stdout)
+    output = {item["table"]["table"]: item for item in payload["data"]["tables"]}
+    schema = snapshot(postgres, "preview_seed").schema
+    config = load_config(path)
+    plan = build_plan(config, schema, [])
+    assert payload["data"]["plan"]["total_rows"] == plan.total_rows == 13
+    metadata = {table.id: dataset_columns(table) for table in schema.tables}
+    for batch in generate_batches(plan, schema, config):
+        name = batch[0].table.table
+        assert output[name]["rows"] == [
+            list(dataset_row(record, metadata[record.table])) for record in batch[:2]
+        ]
+    assert output["empty"]["columns"] == [{"name": "id", "type": "integer"}]
+    assert output["empty"]["rows"] == []
+    assert all(row[-1] == "3.01" for row in output["child"]["rows"])
+    assert output["parent"]["rows"][0][0] == "1"
+    assert "computed" not in {column["name"] for column in output["child"]["columns"]}
+
+    child_only = invoke("preview", path, postgres.url, *opts, "--table", "child", "--verbose")
+    assert child_only.returncode == 0 and child_only.stderr
+    assert json.loads(child_only.stdout)["data"]["tables"] == [output["child"]]
+
+    blocked = invoke("preview", path, postgres.url, "--table", "blocked", "--json")
+    assert blocked.returncode == 4
+    assert json.loads(blocked.stdout)["data"]["tables"] == []
+    unusable = invoke("preview", path, postgres.url, "--limit", "0", "--json")
+    assert unusable.returncode == 2
+    assert postgres.sql(query) == before
