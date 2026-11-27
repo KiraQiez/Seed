@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1–4 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–5 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -110,15 +110,18 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 5 Preview and validation
 
-- [ ] **SEED-501 · Add staged validation** · P0
+- [x] **SEED-501 · Add staged validation** · P0
   - **Dependencies** `SEED-304`, `SEED-405` · **Requirements** `FR-006`, `FR-009`
   - Expose `validate` with subordinate configuration, plan, and dataset stages. Stream full offline validation when requested. **Verify.** `just test-integration` distinguishes stage failures and skipped stages. Full validation counts rows without inserting or retaining the dataset.
-- [ ] **SEED-502 · Add preview** · P1
+  - **Verified.** Installed CLI and unit tests verified configuration, connection, plan, and dataset outcomes, completed-batch counts, scoped failure ordinals, and unchanged rows and sequences.
+- [x] **SEED-502 · Add preview** · P1
   - **Dependencies** `SEED-501` · **Requirements** `FR-005`, `NFR-001`
   - Expose plans and per-table sample rows, with display limits and necessary parent pool generation. **Verify.** `just test-integration` checks sample limit and selection, repeatability, and unchanged rows and sequences.
-- [ ] **SEED-503 · Verify machine-readable command contracts** · P1
+  - **Verified.** Tests verified bounded deterministic previews, full composite parent pools, zero-row output, and exact prefixes of full generation.
+- [x] **SEED-503 · Verify machine-readable command contracts** · P1
   - **Dependencies** `SEED-501`, `SEED-502` · **Requirements** `FR-009`, `NFR-003`
   - Cover the versioned response, exit statuses, diagnostics placement, and redaction across implemented commands. **Verify.** `uv run pytest tests/unit` parses JSON output and checks success, blocked plans, error envelope shape, and sensitive value removal.
+  - **Verified.** Tests verified one version-1 JSON envelope for each implemented command, stable statuses, distinct stderr diagnostics, typed sample values, and redaction. All 79 unit tests and 12 integration tests on each PostgreSQL major 15–19 passed. Builds, wheel smoke tests, and all 13 hosted jobs passed. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46078543896)
 
 ### Phase 6 Safe database insertion
 
