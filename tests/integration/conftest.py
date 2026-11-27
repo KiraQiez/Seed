@@ -6,7 +6,7 @@ import re
 import secrets
 import subprocess
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
@@ -36,7 +36,7 @@ class PostgresFixture:
     """A database created and owned by the current test session."""
 
     compose: list[str]
-    env: dict[str, str]
+    env: dict[str, str] = field(repr=False)
     database: str
     port: int
     major: str
@@ -80,7 +80,7 @@ def postgres() -> Iterator[PostgresFixture]:
     env = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith(("COMPOSE_", "PG")) and key != "DOCKER_HOST"
+        if not key.startswith(("COMPOSE_", "PG")) and key not in {"DOCKER_HOST", "DATABASE_URL"}
     }
     raw_context = _docker(["context", "inspect", "--format", "{{json .}}"], env)
     context = json.loads(raw_context)
@@ -130,7 +130,8 @@ def postgres() -> Iterator[PostgresFixture]:
         identity = fixture.sql(
             "SELECT current_database() || ':' || current_setting('server_version_num')"
         )
-        if not identity.startswith(f"{database}:{major}"):
+        actual_database, _, server_version = identity.partition(":")
+        if actual_database != database or int(server_version) // 10000 != int(major):
             pytest.fail("Integration database identity or version differed from fixture.")
         yield fixture
     finally:
