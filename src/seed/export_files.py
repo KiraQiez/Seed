@@ -3,6 +3,7 @@
 import json
 import os
 import stat
+import sys
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
@@ -32,7 +33,7 @@ class ExportDirectory:
         self._open: set[str] = set()
         self.complete = False
         self._check_directory()
-        if os.name == "posix":
+        if sys.platform != "win32":
             self._dir_fd = os.open(self.path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
             if _identity(os.fstat(self._dir_fd)) != self._directory:
                 self.close()
