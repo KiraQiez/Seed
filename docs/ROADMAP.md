@@ -26,9 +26,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
   - **Dependencies** None · **Requirements** `NFR-004`, `NFR-005`
   - Create the minimal functional `src` package, version metadata, Hatchling build configuration and uv lockfile. **Verify.** Build a wheel and sdist with `uv build`. Install the wheel in isolation and import the versioned package.
   - **Verified.** Built the wheel and sdist with `uv build` and imported version 0.1.0 from a clean Python 3.15 wheel install.
-- [ ] **SEED-102 · Establish CLI and terminal rendering** · P1
+- [x] **SEED-102 · Establish CLI and terminal rendering** · P1
   - **Dependencies** `SEED-101` · **Requirements** `FR-009`, `NFR-004`
   - Add the provisional `seed` entry point and Typer/Rich boundary with help, version, and separate result and diagnostic streams. **Verify.** `uv run seed --help` and `uv run seed --version` succeed. CLI parser tests cover invalid invocation and captured streams.
+  - **Verified.** Installed help and version worked. Sixteen unit cases passed on Python 3.15, including parser and output-channel checks.
 - [x] **SEED-103 · Validate versioned TOML** · P0
   - **Dependencies** `SEED-101` · **Requirements** `FR-001`, `FR-006`, `NFR-003`
   - Implement the TOML loader and Pydantic models with defaults, strict fields, override inputs, and sanitized issues. **Verify.** `uv run pytest tests/unit` covers the documented examples, unsupported versions, unknown keys, incompatible rule parameters, and absent credentials.
