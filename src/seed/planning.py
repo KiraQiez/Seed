@@ -22,6 +22,7 @@ class PlanIssue(Metadata):
     table: TableId | None = None
     column: str | None = None
     constraint: str | None = None
+    ordinal: int | None = None
 
 
 class Compatibility(Metadata):
