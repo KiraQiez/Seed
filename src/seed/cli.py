@@ -1,6 +1,7 @@
 """Terminal entry point for Seed."""
 
 import json
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -10,6 +11,7 @@ from rich.text import Text
 from typer._click.exceptions import UsageError
 
 from seed import __version__
+from seed.apply_command import run_apply
 from seed.config import ConfigError
 from seed.database import DatabaseError
 from seed.initialize import initialize_config
@@ -295,6 +297,52 @@ def preview(
         if report.status:
             for issue in report.issues:
                 _render_issue(issue)
+    if report.status:
+        raise typer.Exit(report.status)
+
+
+def _apply_prompt() -> str:
+    sys.stderr.write("Apply the planned rows? [y/N] ")
+    sys.stderr.flush()
+    return sys.stdin.readline()
+
+
+@app.command()
+def apply(
+    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
+        "./seed.toml"
+    ),
+    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
+    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
+    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
+    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
+    locale: Annotated[str | None, typer.Option("--locale")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Run read-only preflight.")] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the confirmation prompt.")] = False,
+) -> None:
+    """Insert planned rows into an explicitly authorized development or test target."""
+    report = run_apply(
+        PlanRequest(config, schema, table or [], rows, locale, random_seed),
+        yes=yes,
+        dry_run=dry_run,
+        interactive=sys.stdin.isatty() and sys.stderr.isatty(),
+        prompt=_apply_prompt,
+        show_target=diagnostic,
+    )
+    if verbose:
+        diagnostic("Completed apply workflow.")
+    if as_json:
+        _json_response("apply", report.status, report.payload(), report.issues)
+    else:
+        for issue in report.issues:
+            _render_issue(issue)
+        if report.status == 0 and dry_run:
+            result("Read-only preflight passed.")
+        elif report.insertion is not None and report.insertion.counts is not None:
+            for count in report.insertion.counts:
+                result(f"Committed {count.rows} rows to {json.dumps(count.table.table)}.")
     if report.status:
         raise typer.Exit(report.status)
 

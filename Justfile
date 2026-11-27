@@ -13,3 +13,6 @@ build:
 
 test-integration:
     uv run --locked pytest tests/integration
+
+test-e2e:
+    uv run --locked pytest tests/e2e

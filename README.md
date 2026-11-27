@@ -4,11 +4,11 @@
 
 Seed is a planned open-source CLI for populating development and test databases with realistic synthetic data. It inspects a PostgreSQL schema, plans parent-first generation, and lets developers and QA teams review the results before applying or exporting them.
 
-**Status.** The Python foundation is available from source. It provides help, version, starter configuration creation, read-only PostgreSQL schema inspection, generation planning, validation, and offline preview. Apply and export are planned.
+**Status.** The Python foundation is available from source. It provides help, version, starter configuration creation, read-only PostgreSQL schema inspection, generation planning, validation, offline preview, and guarded database apply. Export is planned.
 
 Run `just setup`, then `uv run seed --help` or `uv run seed init`. Set the configured connection environment variable and run `uv run seed inspect` to inspect a schema.
 
-## Planned workflow
+## Workflow
 
 ```bash
 seed init
@@ -16,7 +16,7 @@ seed inspect
 seed plan --table customers
 seed preview --table customers --limit 5
 seed validate --table customers --dataset
-seed export --table customers --format csv --output ./sample-data
+seed apply --table customers --dry-run
 ```
 
 Set the connection URL in the environment variable named in [the configuration](docs/DATA_MODEL.md#configuration). To write rows, configure an explicit development or test target and review `seed apply --dry-run` before `seed apply`.

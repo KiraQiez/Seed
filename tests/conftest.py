@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-COMPOSE_FILE = Path(__file__).with_name("compose.yaml")
+COMPOSE_FILE = Path(__file__).with_name("integration") / "compose.yaml"
 
 
 def _docker(args: list[str], env: dict[str, str], timeout: int = 30) -> str:

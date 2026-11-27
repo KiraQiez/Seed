@@ -1,6 +1,6 @@
 # CLI specification
 
-Help, version, `init`, `inspect`, `plan`, `preview`, and `validate` are available. Apply and export are planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
+Help, version, `init`, `inspect`, `plan`, `preview`, `validate`, and `apply` are available. Export is planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
 
 ## Commands
 
@@ -45,7 +45,7 @@ Use the following `data` payloads. Their component fields and typed values are d
 | `plan` | `{plan}` |
 | `preview` | `{plan, tables}` with ordered sample datasets |
 | `validate` | `{config, plan, dataset}` stage results |
-| `apply` | `{dry_run, plan, insertion}` with `insertion: null` for dry-run |
+| `apply` | `{dry_run, plan, insertion}`. Dry-run returns `insertion: null`. Real runs include the outcome, and only acknowledged commits include `counts` with `{table, rows}` entries. |
 | `export` | `{export}` with manifest, paths, and counts |
 
 ## Exit status

@@ -159,7 +159,12 @@ def execute_apply(
     approved: ApprovedPlan,
 ) -> WriteResult:
     """Hold all locks through one commit and expose counts only after acknowledgement."""
-    transaction = begin_guarded_write(connection, url, config, request, approved)
+    try:
+        transaction = begin_guarded_write(connection, url, config, request, approved)
+    except KeyboardInterrupt:
+        return _write_error(
+            "not_started", "INTERRUPTED", "Apply was interrupted before writing.", 130
+        )
     writer = PostgreSQLWriter(connection)
     counts: dict[TableId, int] = {}
     inputs = LiveInputs(

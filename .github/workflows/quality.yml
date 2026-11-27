@@ -69,4 +69,4 @@ jobs:
         with:
           version: '0.13.9'
       - run: uv sync --locked
-      - run: uv run --locked pytest tests/integration
+      - run: uv run --locked pytest tests/integration tests/e2e

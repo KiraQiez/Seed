@@ -130,3 +130,31 @@ def test_guard_checks_lock_permissions_and_times_out_behind_other_writer(
             assert app.scalar(text("SHOW statement_timeout")) == "1min"
         finally:
             guarded.rollback()
+
+
+def test_guard_rejects_lost_connections_and_replication_override(postgres: PostgresFixture) -> None:
+    from sqlalchemy import text
+
+    from seed.apply import begin_guarded_write
+
+    postgres.sql("""
+        CREATE SCHEMA apply_connection_fixture;
+        CREATE TABLE apply_connection_fixture.items (id integer);
+    """)
+    url = parse_database_url(postgres.url, {})
+    config = config_for(postgres, "apply_connection_fixture")
+    request = PlanRequest(Path("unused"), None, [], None, None, None)
+    with open_session(url, config.database) as connection:
+        approved = apply_preflight(connection, url, config, request)
+        connection.invalidate()
+        with pytest.raises(ApplyError) as lost:
+            begin_guarded_write(connection, url, config, request, approved)
+        assert lost.value.code == "TARGET_CHANGED"
+
+    with open_session(url, config.database) as connection:
+        with connection.begin():
+            connection.execute(text("SET session_replication_role = replica"))
+        with pytest.raises(ApplyError) as bypass:
+            apply_preflight(connection, url, config, request)
+        assert bypass.value.code == "UNSAFE_REPLICATION_ROLE"
+    assert postgres.sql("SELECT count(*) FROM apply_connection_fixture.items") == "0"

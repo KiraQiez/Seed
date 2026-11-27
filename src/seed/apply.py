@@ -143,12 +143,11 @@ def qualified(connection: Connection, table: TableId) -> str:
 
 
 def check_empty_targets(connection: Connection, config: SeedConfig, approved: ApprovedPlan) -> None:
-    if config.safety.allow_existing_data:
-        return
     for table in approved.targets:
-        if connection.scalar(
+        has_rows = connection.scalar(
             text(f"SELECT EXISTS (SELECT 1 FROM ONLY {qualified(connection, table)})")
-        ):
+        )
+        if has_rows and not config.safety.allow_existing_data:
             raise ApplyError(
                 "TARGET_NOT_EMPTY",
                 "A target table contains rows and append is disabled.",
