@@ -127,8 +127,13 @@ def open_session(url: URL, config: DatabaseConfig) -> Iterator[Connection]:
                     "CONNECTION_TIMEOUT", "The PostgreSQL connection timed out."
                 ) from None
             raise DatabaseError("CONNECTION_FAILED", "Could not connect to PostgreSQL.") from None
-        with connection:
+        try:
             yield connection
+        finally:
+            try:
+                connection.close()
+            except SQLAlchemyError:
+                pass
     finally:
         engine.dispose()
 

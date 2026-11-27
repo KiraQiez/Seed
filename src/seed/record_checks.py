@@ -122,6 +122,8 @@ class UniqueReservations:
         cls,
         table: TableSchema,
         configured: dict[str, GeneratorRule],
+        *,
+        pending: frozenset[str] = frozenset(),
     ) -> "UniqueReservations":
         rules: list[UniqueRule] = []
         if table.primary_key is not None:
@@ -137,7 +139,7 @@ class UniqueReservations:
             for column, rule in configured.items()
             if rule.unique
         )
-        return cls(tuple(rules))
+        return cls(tuple(rule for rule in rules if pending.isdisjoint(rule.columns)))
 
     def check_capacity(self, table: TableId, domains: dict[str, Domain], rows: int) -> None:
         """Refuse a finite unique domain that provably cannot satisfy the request."""

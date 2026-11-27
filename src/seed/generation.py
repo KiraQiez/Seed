@@ -1,13 +1,13 @@
 """Stream planned offline records without accessing a database."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from functools import partial
 
 from seed.bindings import Binding, choose_binding
 from seed.config import GeneratorRule, SeedConfig
 from seed.metadata import ColumnSchema, DatabaseSchema, NumericBound, TableSchema
-from seed.planning import GenerationPlan, PlanIssue, PlannedTable
+from seed.planning import GenerationPlan, Mode, PlanIssue, PlannedTable
 from seed.record_checks import UniqueReservations, scalar_domain, value_matches
 from seed.relationships import ForeignKeys, ParentPools
 from seed.scalars import scalar_value
@@ -22,6 +22,8 @@ from seed.streaming import (
     retry_row,
     validate_batch_size,
 )
+
+type InsertBatch = Callable[[TableSchema, RecordBatch, tuple[str, ...]], RecordBatch]
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,27 @@ def generate_batches(
     batch_size: int | None = None,
 ) -> Iterator[RecordBatch]:
     """Generate the planned records in deterministic, bounded single-table batches."""
+    yield from _generate(plan, schema, config, "offline", batch_size, None)
+
+
+def generate_live_batches(
+    plan: GenerationPlan,
+    schema: DatabaseSchema,
+    config: SeedConfig,
+    insert: InsertBatch,
+) -> Iterator[RecordBatch]:
+    """Generate live rows and correlate the committed-to-transaction batch from the adapter."""
+    yield from _generate(plan, schema, config, "live", None, insert)
+
+
+def _generate(
+    plan: GenerationPlan,
+    schema: DatabaseSchema,
+    config: SeedConfig,
+    mode: Mode,
+    batch_size: int | None,
+    insert: InsertBatch | None,
+) -> Iterator[RecordBatch]:
     if (
         plan.schema_fingerprint != schema.fingerprint
         or plan.target != schema.target
@@ -53,17 +76,17 @@ def generate_batches(
                 message="The plan does not match the supplied schema or row limits.",
             )
         )
-    mode = plan.compatibility.get("offline")
-    if mode is None or not mode.executable:
+    compatibility = plan.compatibility.get(mode)
+    if compatibility is None or not compatibility.executable:
         raise GenerationError(
             PlanIssue(
                 code="PLAN_BLOCKED",
-                message="This plan cannot generate offline records.",
+                message=f"This plan cannot generate {mode} records.",
             )
         )
     size = plan.settings.batch_size if batch_size is None else batch_size
     validate_batch_size(size)
-    yield from _table_batches(plan, schema, config, size)
+    yield from _table_batches(plan, schema, config, size, mode, insert)
 
 
 def _table_batches(
@@ -71,6 +94,8 @@ def _table_batches(
     schema: DatabaseSchema,
     config: SeedConfig,
     size: int,
+    mode: Mode,
+    insert: InsertBatch | None,
 ) -> Iterator[RecordBatch]:
     tables = {table.id: table for table in schema.tables}
     pools = ParentPools(plan)
@@ -80,10 +105,20 @@ def _table_batches(
         table = tables.get(planned.id)
         if table is None:
             raise _binding_error(planned)
-        columns = _prepare_columns(planned, table, config, plan.settings.locale)
+        columns = _prepare_columns(planned, table, config, plan.settings.locale, mode)
+        identities = tuple(
+            item.binding.column for item in columns if item.binding.source == "server_identity"
+        )
+        identity_columns = {item.binding.column: item.schema for item in columns}
+        pending = frozenset(identities)
+        writable = tuple(item for item in columns if item.binding.column not in pending)
         context = RunContext(plan.settings, planned.id)
         foreign = ForeignKeys.prepare(planned, table, pools, context)
-        uniqueness = UniqueReservations.for_table(table, config.rules.get(table.id.table, {}))
+        uniqueness = UniqueReservations.for_table(
+            table,
+            config.rules.get(table.id.table, {}),
+            pending=pending,
+        )
         domains = {
             item.binding.column: scalar_domain(
                 item.schema,
@@ -94,7 +129,7 @@ def _table_batches(
                 context.settings.null_rate,
                 planned.rows,
             )
-            for item in columns
+            for item in writable
         }
         uniqueness.check_capacity(planned.id, domains, planned.rows)
 
@@ -102,18 +137,22 @@ def _table_batches(
             keys = foreign.draw()
             if keys is None:
                 return None
-            values = _candidate(columns, context, ordinal, keys)
+            values = _candidate(writable, context, ordinal, keys)
             if (
                 any(
                     not value_matches(
                         values[item.binding.column], item.schema, item.bounds, item.rule
                     )
-                    for item in columns
+                    for item in writable
                 )
                 or not foreign.contains(values)
                 or (
                     table.primary_key
-                    and any(values[key] is None for key in table.primary_key.columns)
+                    and any(
+                        values[key] is None
+                        for key in table.primary_key.columns
+                        if key not in pending
+                    )
                 )
                 or not uniqueness.reserve(values)
             ):
@@ -124,10 +163,26 @@ def _table_batches(
             for ordinal in range(planned.rows):
                 record = retry_row(planned.id, ordinal, partial(draw, ordinal))
                 foreign.accept(record.values)
-                pools.accept(record)
                 yield record
 
-        yield from batches(accepted_rows(), size)
+        for batch in batches(accepted_rows(), size):
+            completed = insert(table, batch, identities) if insert is not None else batch
+            if len(completed) != len(batch):
+                raise _binding_error(planned)
+            for original, record in zip(batch, completed, strict=True):
+                if (
+                    record.table != original.table
+                    or record.ordinal != original.ordinal
+                    or any(
+                        name not in record.values
+                        or record.values[name] is None
+                        or not value_matches(record.values[name], identity_columns[name], (), None)
+                        for name in identities
+                    )
+                ):
+                    raise _binding_error(planned)
+                pools.accept(record)
+            yield completed
         pools.finish(planned)
 
 
@@ -136,10 +191,11 @@ def _prepare_columns(
     table: TableSchema,
     config: SeedConfig,
     locale: str,
+    mode: Mode,
 ) -> tuple[_Column, ...]:
     rules = config.rules.get(table.id.table, {})
     columns = {column.name: column for column in table.columns}
-    bindings = planned.bindings.get("offline")
+    bindings = planned.bindings.get(mode)
     if bindings is None or tuple(binding.column for binding in bindings) != tuple(columns):
         raise _binding_error(planned)
     if rules.keys() - columns.keys():
