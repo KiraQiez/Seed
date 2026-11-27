@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1–3 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–4 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -87,21 +87,26 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 4 Data generation
 
-- [ ] **SEED-401 · Establish deterministic streaming** · P0
+- [x] **SEED-401 · Establish deterministic streaming** · P0
   - **Dependencies** `SEED-303` · **Requirements** `FR-004`, `NFR-001`, `NFR-002`
   - Implement run context, seeded streams, ordered row and batch interfaces, and retry budgets. **Verify.** `uv run pytest tests/unit` proves stable draw order across batch sizes and bounded attempts without global random state.
-- [ ] **SEED-402 · Generate generic typed values** · P1
+  - **Verified.** Unit tests verified deterministic private RNG and Faker streams, parallel independent runs, single-table batches, and the 100-attempt cap.
+- [x] **SEED-402 · Generate generic typed values** · P1
   - **Dependencies** `SEED-401` · **Requirements** `FR-004`, `NFR-001`
   - Add scalar generators for supported types, enum labels, exact numeric bounds and precision, temporal types, UUIDs, and nullable values. **Verify.** `uv run pytest tests/unit` covers scalar types, boundaries, exact decimal rounding cases, UTC/reference handling, and typed nullability.
-- [ ] **SEED-403 · Resolve semantic inference and explicit rules** · P1
+  - **Verified.** Unit tests verified typed scalars, exact open decimal bounds and scale, and timestamp precision and time zones.
+- [x] **SEED-403 · Resolve semantic inference and explicit rules** · P1
   - **Dependencies** `SEED-402` · **Requirements** `FR-004`, `NFR-001`, `NFR-003`
   - Connect Faker and the built-in registry to explicit and inferred bindings, including reserved synthetic contact details. **Verify.** `uv run pytest tests/unit` checks precedence, locale compatibility, typing, reserved contact values, short columns, and fallback or refusal.
-- [ ] **SEED-404 · Generate offline keys and relationships** · P0
+  - **Verified.** Unit tests verified explicit choice and constant conversion, short-column and locale fallback, Faker output, and reserved contact data.
+- [x] **SEED-404 · Generate offline keys and relationships** · P0
   - **Dependencies** `SEED-302`, `SEED-402` · **Requirements** `FR-004`, `FR-008`, `NFR-001`
   - Add explicit offline identity allocation, FK tuple pools, row correlation inputs, and nullable edge handling. **Verify.** `uv run pytest tests/unit` covers owned keys, UUID and string parents, composite tuple matching, depleted and nullable parents, and junction records.
-- [ ] **SEED-405 · Enforce supported record constraints** · P0
+  - **Verified.** Tests verified offline identity ordinals, composite UUID/text keys, mixed-null edges, unique foreign key capacity, and the 26,500-row reference dataset.
+- [x] **SEED-405 · Enforce supported record constraints** · P0
   - **Dependencies** `SEED-403`, `SEED-404` · **Requirements** `FR-004`, `FR-006`, `NFR-002`
   - Validate generated rows against required values, checks, key membership, and supported uniqueness. Reserve accepted tuples and report bounded exhaustion. **Verify.** `uv run pytest tests/unit` covers numeric conjunctions, impossible ranges, composite uniqueness, `NULLS NOT DISTINCT`, and unique FK capacity.
+  - **Verified.** Tests verified composite and null-aware uniqueness, atomic reservation, finite-domain and retry failures, and unchanged PostgreSQL rows and sequences. Local checks passed on Python 3.12–3.15 and PostgreSQL 15–19. All 13 hosted implementation jobs passed. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46028891818)
 
 ### Phase 5 Preview and validation
 
