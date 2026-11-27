@@ -107,37 +107,49 @@ def _parse(value: str) -> URL:
 
 
 @contextmanager
-def read_session(url: URL, config: DatabaseConfig) -> Iterator[Connection]:
-    """Yield a transaction pinned to a read-only PostgreSQL snapshot."""
+def open_session(url: URL, config: DatabaseConfig) -> Iterator[Connection]:
+    """Open a single physical PostgreSQL connection without pooling."""
     engine = create_engine(
         url,
         connect_args={"connect_timeout": config.connect_timeout},
         poolclass=NullPool,
         hide_parameters=True,
     )
-    connected = False
     try:
-        with engine.connect() as connection:
-            connected = True
-            connection.execution_options(
-                isolation_level="REPEATABLE READ",
-                postgresql_readonly=True,
-            )
-            with connection.begin():
-                connection.execute(text("SET LOCAL search_path TO pg_catalog"))
-                yield connection
-    except SQLAlchemyError as error:
-        if isinstance(error, DBAPIError) and (
-            type(error.orig).__name__ == "ConnectionTimeout"
-            or (not connected and "timeout expired" in str(error.orig).lower())
-        ):
-            raise DatabaseError(
-                "CONNECTION_TIMEOUT", "The PostgreSQL connection timed out."
-            ) from None
-        if not connected:
+        try:
+            connection = engine.connect()
+        except SQLAlchemyError as error:
+            if isinstance(error, DBAPIError) and (
+                type(error.orig).__name__ == "ConnectionTimeout"
+                or "timeout expired" in str(error.orig).lower()
+            ):
+                raise DatabaseError(
+                    "CONNECTION_TIMEOUT", "The PostgreSQL connection timed out."
+                ) from None
             raise DatabaseError("CONNECTION_FAILED", "Could not connect to PostgreSQL.") from None
-        raise DatabaseError(
-            "SCHEMA_INSPECTION_FAILED", "Could not inspect the PostgreSQL schema.", 4
-        ) from None
+        with connection:
+            yield connection
     finally:
         engine.dispose()
+
+
+@contextmanager
+def read_snapshot(connection: Connection) -> Iterator[None]:
+    """Start and finish a read-only snapshot on an open connection."""
+    connection.execution_options(isolation_level="REPEATABLE READ", postgresql_readonly=True)
+    with connection.begin():
+        connection.execute(text("SET LOCAL search_path TO pg_catalog"))
+        yield
+
+
+@contextmanager
+def read_session(url: URL, config: DatabaseConfig) -> Iterator[Connection]:
+    """Yield a transaction pinned to a read-only PostgreSQL snapshot."""
+    with open_session(url, config) as connection:
+        try:
+            with read_snapshot(connection):
+                yield connection
+        except SQLAlchemyError:
+            raise DatabaseError(
+                "SCHEMA_INSPECTION_FAILED", "Could not inspect the PostgreSQL schema.", 4
+            ) from None
