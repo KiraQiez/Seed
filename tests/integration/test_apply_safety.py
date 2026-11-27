@@ -82,6 +82,16 @@ def test_guard_refuses_changes_after_preflight(postgres: PostgresFixture) -> Non
         assert not connection.in_transaction()
 
         approved = apply_preflight(connection, url, config, request)
+        postgres.sql("""
+            DROP TABLE apply_changed_fixture.items;
+            CREATE TABLE apply_changed_fixture.items (id integer, label text);
+        """)
+        with pytest.raises(ApplyError) as replaced:
+            begin_guarded_write(connection, url, config, request, approved)
+        assert replaced.value.code == "TARGET_CHANGED"
+        assert not connection.in_transaction()
+
+        approved = apply_preflight(connection, url, config, request)
         postgres.sql("INSERT INTO apply_changed_fixture.items (id) VALUES (1)")
         with pytest.raises(ApplyError) as occupied:
             begin_guarded_write(connection, url, config, request, approved)

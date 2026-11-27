@@ -6,21 +6,24 @@ Seed is a planned open-source CLI for populating development and test databases 
 
 **Status.** The Python foundation is available from source. It provides help, version, starter configuration creation, read-only PostgreSQL schema inspection, generation planning, validation, offline preview, guarded database apply, and SQL, CSV, and JSON exports.
 
-Run `just setup`, then `uv run seed --help` or `uv run seed init`. Set the configured connection environment variable and run `uv run seed inspect` to inspect a schema.
+Run `just setup` from the checkout and use `uv run seed --help` to list commands. The workflow below assumes a development or test database with a `customers` table.
 
 ## Workflow
 
 ```bash
-seed init
-seed inspect
-seed plan --table customers
-seed preview --table customers --limit 5
-seed validate --table customers --dataset
-seed export --table customers --format json
-seed apply --table customers --dry-run
+uv run seed init
+uv run seed inspect
+uv run seed plan --table customers
+uv run seed preview --table customers --limit 5
+uv run seed validate --table customers --dataset
+uv run seed export --table customers --format json
+uv run seed apply --table customers --dry-run
+uv run seed apply --table customers
 ```
 
-Set the connection URL in the environment variable named in [the configuration](docs/DATA_MODEL.md#configuration). To write rows, configure an explicit development or test target and review `seed apply --dry-run` before `seed apply`. Export creates a new directory with a completion manifest. See the [import and sequence instructions](docs/SECURITY.md#sql-and-export-safety) before loading artifacts.
+After `init`, set `DATABASE_URL` to the connection URL and adjust the schema in `seed.toml` as needed. Before the two apply commands, configure the explicit development or test target, review the dry-run, and confirm the real write at the prompt. [Configuration example](docs/DATA_MODEL.md#configuration)
+
+Export creates a fresh `seed-export` directory with a completion manifest. [Import and sequence reconciliation](docs/SECURITY.md#sql-and-export-safety)
 
 The MVP uses a standalone Python package, PostgreSQL, and Faker. It includes supported composite keys, deterministic data generation, transactional insertion, and SQL, CSV, and JSON exports. See the [product requirements](docs/PRD.md#mvp-workflow) for scope.
 

@@ -54,3 +54,16 @@ def test_failed_export_cleans_owned_files_only(tmp_path: Path) -> None:
     with pytest.raises(ExportFileError), export_directory(incomplete):
         pass
     assert not incomplete.exists()
+
+
+def test_refuses_a_replaced_artifact_and_preserves_the_replacement(tmp_path: Path) -> None:
+    path = tmp_path / "export"
+    replacement = tmp_path / "replacement"
+    replacement.write_text("keep", encoding="utf-8")
+    with pytest.raises(ExportFileError, match="finish writing"), export_directory(path) as output:
+        with output.artifact("dataset.json") as artifact:
+            artifact.write("generated")
+        replacement.replace(path / "dataset.json")
+        output.publish({"version": 1})
+    assert (path / "dataset.json").read_text(encoding="utf-8") == "keep"
+    assert not (path / "manifest.json").exists()

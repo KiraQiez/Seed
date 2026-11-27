@@ -190,6 +190,7 @@ def test_export_generation_failure_leaves_no_success_marker(
 ) -> None:
     postgres.sql("""
         CREATE SCHEMA export_failed;
+        CREATE TABLE export_failed.a_first (id integer NOT NULL);
         CREATE TABLE export_failed.items (value boolean NOT NULL UNIQUE);
     """)
     path = tmp_path / "seed.toml"
@@ -208,9 +209,9 @@ value = true
 """,
         encoding="utf-8",
     )
-    process = _seed(path, postgres, "export", "--format", "json")
+    process = _seed(path, postgres, "export", "--format", "csv")
     assert process.returncode == 4
     payload = json.loads(process.stdout)
     assert payload["data"] is None and not payload["ok"]
-    assert not (tmp_path / "seed-export" / "manifest.json").exists()
+    assert not (tmp_path / "seed-export").exists()
     assert postgres.sql("SELECT count(*) FROM export_failed.items") == "0"

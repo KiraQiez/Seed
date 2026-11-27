@@ -121,20 +121,26 @@ def test_apply_dry_run_refusal_commit_and_opted_in_append(
     )
 
 
-@pytest.mark.parametrize("reply", [b"n\n", b"\x04"])
-def test_actual_terminal_decline_and_eof(
+@pytest.mark.parametrize(
+    ("case", "reply", "status"),
+    [("decline", b"n\n", 5), ("eof", b"\x04", 5), ("accept", b"yes\n", 0)],
+)
+def test_actual_terminal_confirmation(
     postgres: PostgresFixture,
     tmp_path: Path,
+    case: str,
     reply: bytes,
+    status: int,
 ) -> None:
     if sys.platform == "win32":
         pytest.skip("POSIX terminal test")
-    postgres.sql("""
-        CREATE SCHEMA IF NOT EXISTS apply_terminal;
-        CREATE TABLE IF NOT EXISTS apply_terminal.items (id integer);
+    schema = f"apply_terminal_{case}"
+    postgres.sql(f"""
+        CREATE SCHEMA {schema};
+        CREATE TABLE {schema}.items (id integer);
     """)
     path = tmp_path / "seed.toml"
-    _config(path, postgres, "apply_terminal")
+    _config(path, postgres, schema)
     master, terminal = os.openpty()
     try:
         with subprocess.Popen(
@@ -152,14 +158,19 @@ def test_actual_terminal_decline_and_eof(
                 process.kill()
                 process.communicate()
                 raise
-            assert process.returncode == 5
+            assert process.returncode == status
     finally:
         os.close(terminal)
         os.close(master)
-    outcome = json.loads(output)
-    assert outcome["issues"][-1]["code"] == "CANCELLED"
-    assert outcome["data"]["insertion"] == {"outcome": "not_started"}
-    assert postgres.sql("SELECT count(*) FROM apply_terminal.items") == "0"
+    response = json.loads(output)
+    actual_rows = postgres.sql(f"SELECT count(*) FROM {schema}.items")
+    if status == 0:
+        assert response["data"]["insertion"]["outcome"] == "committed"
+        assert actual_rows == "3"
+    else:
+        assert response["issues"][-1]["code"] == "CANCELLED"
+        assert response["data"]["insertion"] == {"outcome": "not_started"}
+        assert actual_rows == "0"
 
 
 def test_cli_rollback_never_reports_rolled_back_counts(
