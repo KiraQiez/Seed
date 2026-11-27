@@ -52,6 +52,7 @@ class ColumnSchema(Metadata):
     nullable: bool
     default_kind: str
     identity: str | None = None
+    sequence_max: int | None = None
     generated: str | None = None
 
 

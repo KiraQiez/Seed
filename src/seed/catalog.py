@@ -212,6 +212,7 @@ def enrich_table(
             model.model_copy(
                 update={
                     "ordinal": row["attnum"],
+                    "sequence_max": row["seqmax"],
                     "default_kind": default_kind,
                     "generated": generated,
                     "type": model.type.model_copy(update={"collation": row["collname"]}),
