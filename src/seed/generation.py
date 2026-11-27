@@ -8,6 +8,7 @@ from seed.bindings import Binding, choose_binding
 from seed.config import GeneratorRule, SeedConfig
 from seed.metadata import ColumnSchema, DatabaseSchema, NumericBound, TableSchema
 from seed.planning import GenerationPlan, PlanIssue, PlannedTable
+from seed.record_checks import UniqueReservations, scalar_domain, value_matches
 from seed.relationships import ForeignKeys, ParentPools
 from seed.scalars import scalar_value
 from seed.selection import MAX_ROWS
@@ -19,6 +20,7 @@ from seed.streaming import (
     Value,
     batches,
     retry_row,
+    validate_batch_size,
 )
 
 
@@ -60,14 +62,16 @@ def generate_batches(
             )
         )
     size = plan.settings.batch_size if batch_size is None else batch_size
-    yield from batches(_records(plan, schema, config), size)
+    validate_batch_size(size)
+    yield from _table_batches(plan, schema, config, size)
 
 
-def _records(
+def _table_batches(
     plan: GenerationPlan,
     schema: DatabaseSchema,
     config: SeedConfig,
-) -> Iterator[GeneratedRecord]:
+    size: int,
+) -> Iterator[RecordBatch]:
     tables = {table.id: table for table in schema.tables}
     pools = ParentPools(plan)
     for planned in plan.tables:
@@ -79,19 +83,51 @@ def _records(
         columns = _prepare_columns(planned, table, config, plan.settings.locale)
         context = RunContext(plan.settings, planned.id)
         foreign = ForeignKeys.prepare(planned, table, pools, context)
+        uniqueness = UniqueReservations.for_table(table, config.rules.get(table.id.table, {}))
+        domains = {
+            item.binding.column: scalar_domain(
+                item.schema,
+                item.binding.source,
+                item.binding.generator,
+                item.rule,
+                item.bounds,
+                context.settings.null_rate,
+                planned.rows,
+            )
+            for item in columns
+        }
+        uniqueness.check_capacity(planned.id, domains, planned.rows)
 
         def draw(ordinal: int) -> GeneratedRecord | None:
             keys = foreign.draw()
             if keys is None:
                 return None
             values = _candidate(columns, context, ordinal, keys)
+            if (
+                any(
+                    not value_matches(
+                        values[item.binding.column], item.schema, item.bounds, item.rule
+                    )
+                    for item in columns
+                )
+                or not foreign.contains(values)
+                or (
+                    table.primary_key
+                    and any(values[key] is None for key in table.primary_key.columns)
+                )
+                or not uniqueness.reserve(values)
+            ):
+                return None
             return GeneratedRecord(planned.id, ordinal, values)
 
-        for ordinal in range(planned.rows):
-            record = retry_row(planned.id, ordinal, partial(draw, ordinal))
-            foreign.accept(record.values)
-            pools.accept(record)
-            yield record
+        def accepted_rows() -> Iterator[GeneratedRecord]:
+            for ordinal in range(planned.rows):
+                record = retry_row(planned.id, ordinal, partial(draw, ordinal))
+                foreign.accept(record.values)
+                pools.accept(record)
+                yield record
+
+        yield from batches(accepted_rows(), size)
         pools.finish(planned)
 
 

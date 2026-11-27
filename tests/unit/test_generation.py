@@ -140,3 +140,140 @@ def test_schema_mismatch_and_offline_block_are_rejected() -> None:
     with pytest.raises(GenerationError) as captured:
         list(generate_batches(blocked, schema, config))
     assert captured.value.issue.code == "PLAN_BLOCKED"
+
+
+def test_26500_reference_rows_follow_foreign_keys() -> None:
+    from collections import Counter
+
+    counts = {
+        "customers": 1000,
+        "products": 500,
+        "orders": 5000,
+        "items": 15000,
+        "payments": 5000,
+    }
+    parents = {
+        "orders": ("customers",),
+        "items": ("orders", "products"),
+        "payments": ("orders",),
+    }
+    schema = sample(*counts)
+    templates = {table.id.table: table for table in schema.tables}
+    models = []
+    for name, table in templates.items():
+        links = parents.get(name, ())
+        identity, feature = _identity_model("id")
+        models.append(
+            table.model_copy(
+                update={
+                    "columns": (identity, *(column(f"{parent}_id") for parent in links)),
+                    "features": (feature,),
+                    "primary_key": Key(name="pk", columns=("id",)),
+                    "unique_keys": (
+                        UniqueKey(
+                            name="junction",
+                            columns=("orders_id", "products_id"),
+                            supported=True,
+                            nulls_distinct=True,
+                        ),
+                    )
+                    if name == "items"
+                    else (),
+                    "foreign_keys": tuple(
+                        foreign_key(templates[parent], (f"{parent}_id",), ("id",), parent)
+                        for parent in links
+                    ),
+                }
+            )
+        )
+    schema = schema.model_copy(update={"tables": tuple(models)})
+    config = parse_config(
+        BASE + "".join(f"[tables.{name}]\nrows={count}\n" for name, count in counts.items())
+    )
+    generated: Counter[str] = Counter()
+    junction: set[tuple[object, object]] = set()
+    for record in records(schema, config, batch_size=1000):
+        name = record.table.table
+        for parent in parents.get(name, ()):
+            key_value = record.values[f"{parent}_id"]
+            assert isinstance(key_value, int) and 1 <= key_value <= generated[parent]
+        if name == "items":
+            pair = record.values["orders_id"], record.values["products_id"]
+            assert pair not in junction
+            junction.add(pair)
+        generated[name] += 1
+        assert record.values["id"] == generated[name]
+    assert dict(generated) == counts and generated.total() == 26_500
+
+
+@pytest.mark.parametrize("distinct", [True, False])
+def test_sql_unique_null_modes(distinct: bool) -> None:
+    schema = sample("items")
+    table = schema.tables[0].model_copy(
+        update={
+            "columns": (column("description", "text").model_copy(update={"nullable": True}),),
+            "unique_keys": (
+                UniqueKey(
+                    name="unique_description",
+                    columns=("description",),
+                    supported=True,
+                    nulls_distinct=distinct,
+                ),
+            ),
+        }
+    )
+    schema = schema.model_copy(update={"tables": (table,)})
+    config = parse_config(BASE + "[tables.items]\nrows=2\n[rules.items.description]\nnull_rate=1\n")
+    if distinct:
+        assert [row.values["description"] for row in records(schema, config)] == [None, None]
+    else:
+        with pytest.raises(GenerationError) as error:
+            list(records(schema, config))
+        assert error.value.issue.code == "DOMAIN_EXHAUSTED"
+        assert error.value.issue.constraint == "unique_description"
+
+
+def test_nonnullable_unique_foreign_capacity_is_checked() -> None:
+    schema = sample("child", "parent")
+    child, parent = schema.tables
+    parent = parent.model_copy(update={"columns": (column("id"),)})
+    child = child.model_copy(
+        update={
+            "columns": (column("parent_id"),),
+            "primary_key": Key(name="pk", columns=("parent_id",)),
+            "foreign_keys": (foreign_key(parent, ("parent_id",), ("id",)),),
+        }
+    )
+    schema = schema.model_copy(update={"tables": (child, parent)})
+    config = parse_config(BASE + "[tables.parent]\nrows=1\n[tables.child]\nrows=2\n")
+    with pytest.raises(GenerationError) as captured:
+        list(records(schema, config))
+    assert captured.value.issue.code == "PARENT_KEYS_EXHAUSTED"
+
+
+def test_candidate_reservations_are_atomic_for_composite_keys() -> None:
+    from seed.record_checks import UniqueReservations, UniqueRule
+
+    tracked = UniqueReservations(
+        (
+            UniqueRule("pair", ("a", "b"), False),
+            UniqueRule("c", ("c",), False),
+        )
+    )
+    assert tracked.reserve({"a": 1, "b": 2, "c": 3})
+    assert not tracked.reserve({"a": 1, "b": 4, "c": 3})
+    assert tracked.reserve({"a": 1, "b": 4, "c": 5})
+    assert not tracked.reserve({"a": 1, "b": 4, "c": 6})
+
+
+def test_retries_collisions_without_exposing_candidate(monkeypatch: pytest.MonkeyPatch) -> None:
+    schema = sample("items")
+    table = schema.tables[0].model_copy(update={"columns": (column("code", "text"),)})
+    schema = schema.model_copy(update={"tables": (table,)})
+    config = parse_config(BASE + "[tables.items]\nrows=2\n[rules.items.code]\nunique=true\n")
+    monkeypatch.setattr("seed.generation.scalar_value", lambda *args: "private-candidate")
+    with pytest.raises(GenerationError) as captured:
+        list(records(schema, config, batch_size=1))
+    assert captured.value.issue.code == "RETRY_EXHAUSTED"
+    assert captured.value.issue.ordinal == 1
+    assert "private-candidate" not in str(captured.value)

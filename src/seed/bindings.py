@@ -73,7 +73,7 @@ def choose_binding(
         assert rule is not None
         values = rule.values if rule.values is not None else [rule.value]
         valid_values = all(
-            value is not None and _compatible_value(value, column, bounds) for value in values
+            value is not None and compatible_value(value, column, bounds) for value in values
         )
         if valid_values and kind.name == "numeric":
             normalized = {Decimal(value) for value in values if isinstance(value, (int, str))}
@@ -88,9 +88,8 @@ def choose_binding(
     return binding, True
 
 
-def _compatible_value(
-    value: Scalar, column: ColumnSchema, bounds: tuple[NumericBound, ...]
-) -> bool:
+def compatible_value(value: Scalar, column: ColumnSchema, bounds: tuple[NumericBound, ...]) -> bool:
+    """Check an exact scalar against its reflected type and numeric checks."""
     kind = column.type
     if kind.name in INTEGER_BITS:
         return type(value) is int and _feasible_numeric(column, None, bounds, Decimal(value))

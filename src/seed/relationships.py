@@ -98,11 +98,13 @@ class ForeignKeys:
     ) -> "ForeignKeys":
         nullable = frozenset(column.name for column in metadata.columns if column.nullable)
         state = cls(context, table.dependencies, nullable, pools)
-        unique_keys = {
-            frozenset(key.columns): bool(key.nulls_distinct)
-            for key in metadata.unique_keys
-            if key.supported is True
-        }
+        unique_keys: dict[frozenset[str], bool] = {}
+        for unique_key in metadata.unique_keys:
+            if unique_key.supported is True:
+                columns = frozenset(unique_key.columns)
+                unique_keys[columns] = unique_keys.get(columns, True) and bool(
+                    unique_key.nulls_distinct
+                )
         if metadata.primary_key:
             unique_keys[frozenset(metadata.primary_key.columns)] = False
         for edge in table.dependencies:

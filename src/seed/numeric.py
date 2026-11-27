@@ -1,7 +1,7 @@
 """Share exact numeric domains between planning and generation."""
 
 from dataclasses import dataclass
-from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, DecimalException, localcontext
+from decimal import ROUND_CEILING, ROUND_FLOOR, Context, Decimal, DecimalException, localcontext
 
 from seed.config import GeneratorRule
 from seed.metadata import ColumnSchema, NumericBound
@@ -20,8 +20,7 @@ class NumericGrid:
     def decimal(self, units: int) -> Decimal:
         """Convert an integer grid point without implicit context rounding."""
         number = Decimal(units)
-        with localcontext() as context:
-            context.prec = len(number.as_tuple().digits)
+        with localcontext(Context(prec=len(number.as_tuple().digits))):
             return number.scaleb(-self.scale)
 
 
@@ -114,8 +113,8 @@ def _units(bound: tuple[Decimal, bool], scale: int, lower: bool) -> int:
     value, exclusive = bound
     if value and value.adjusted() + scale < 0:
         return int(value > 0) if lower else -int(value < 0)
-    with localcontext() as context:
-        context.prec = max(len(value.as_tuple().digits), value.adjusted() + scale + 1) + 2
+    precision = max(len(value.as_tuple().digits), value.adjusted() + scale + 1) + 2
+    with localcontext(Context(prec=precision)):
         scaled = value.scaleb(scale)
         integral = scaled.to_integral_value(rounding=ROUND_CEILING if lower else ROUND_FLOOR)
         if exclusive and scaled == integral:
