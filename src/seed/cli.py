@@ -16,7 +16,8 @@ from seed.initialize import initialize_config
 from seed.inspection import inspect_database
 from seed.inspection_output import inspection_lines
 from seed.plan_output import plan_issues, plan_lines
-from seed.planning import plan_database
+from seed.planning import PlanRequest, plan_database
+from seed.validation import validate as validate_request
 
 app = typer.Typer(
     help="Generate synthetic data for development and testing.",
@@ -222,6 +223,60 @@ def plan(
         result("\n".join(plan_lines(report)))
     if not report.executable:
         raise typer.Exit(4)
+
+
+def _json_response(
+    command: str,
+    status: int,
+    data: dict[str, object] | None,
+    issues: list[dict[str, object]],
+) -> None:
+    typer.echo(
+        json.dumps(
+            {
+                "version": 1,
+                "command": command,
+                "ok": status == 0,
+                "data": data,
+                "issues": issues,
+            }
+        )
+    )
+
+
+@app.command()
+def validate(
+    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
+        "./seed.toml"
+    ),
+    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
+    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
+    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
+    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
+    locale: Annotated[str | None, typer.Option("--locale")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+    dataset: Annotated[bool, typer.Option("--dataset", help="Validate all offline rows.")] = False,
+) -> None:
+    """Validate configuration, schema compatibility, and optional offline rows."""
+    report = validate_request(
+        PlanRequest(config, schema, table or [], rows, locale, random_seed),
+        dataset=dataset,
+    )
+    if verbose:
+        diagnostic("Completed staged validation.")
+    if as_json:
+        _json_response("validate", report.status, report.payload(), report.issues())
+    else:
+        for name, stage in report.stages().items():
+            count = (
+                f" · {stage.rows_checked} rows checked" if stage.rows_checked is not None else ""
+            )
+            result(f"{name} · {stage.status}{count}")
+        for issue in report.issues():
+            diagnostic(f"{issue['code']} · {issue['message']}")
+    if report.status:
+        raise typer.Exit(report.status)
 
 
 def main() -> int:

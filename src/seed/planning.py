@@ -1,8 +1,11 @@
 """Build a read-only generation plan from normalized schema metadata."""
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
+
+from sqlalchemy import URL
 
 from seed.bindings import Binding, choose_binding
 from seed.config import SeedConfig, load_config
@@ -67,6 +70,38 @@ class GenerationPlan(Metadata):
         return any(mode.executable for mode in self.compatibility.values())
 
 
+@dataclass(frozen=True)
+class PlanRequest:
+    path: Path
+    schema: str | None
+    filters: list[str]
+    rows: int | None
+    locale: str | None
+    random_seed: int | None
+
+    def load(self) -> SeedConfig:
+        """Validate invocation overrides and load the effective configuration."""
+        validate_row_override(self.filters, self.rows)
+        return load_config(
+            self.path,
+            schema=self.schema,
+            locale=self.locale,
+            random_seed=self.random_seed,
+        )
+
+    def snapshot(
+        self,
+        config: SeedConfig,
+        *,
+        url: URL | None = None,
+    ) -> tuple[DatabaseSchema, GenerationPlan]:
+        """Read one schema snapshot and build its plan."""
+        name = config.database.schema_name
+        requested_tables(name, self.filters)
+        metadata = read_schema(config, name, url=url)
+        return metadata, build_plan(config, metadata, self.filters, self.rows)
+
+
 def plan_database(
     path: Path,
     *,
@@ -77,11 +112,8 @@ def plan_database(
     random_seed: int | None,
 ) -> GenerationPlan:
     """Read a schema snapshot and build a plan without reading table data."""
-    validate_row_override(filters, rows)
-    config = load_config(path, schema=schema, locale=locale, random_seed=random_seed)
-    requested_tables(config.database.schema_name, filters)
-    metadata = read_schema(config, config.database.schema_name)
-    return build_plan(config, metadata, filters, rows)
+    request = PlanRequest(path, schema, filters, rows, locale, random_seed)
+    return request.snapshot(request.load())[1]
 
 
 def build_plan(

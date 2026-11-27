@@ -7,29 +7,34 @@ from seed.planning import GenerationPlan, PlanIssue
 
 def plan_issues(report: GenerationPlan) -> list[dict[str, object]]:
     """Expose scoped issues with their affected modes."""
-    issues: list[dict[str, object]] = []
-    for mode, compatibility in report.compatibility.items():
-        for issue in compatibility.issues:
-            issues.append(
-                {
-                    "code": issue.code,
-                    "message": issue.message,
-                    "severity": issue.severity,
-                    "scope": _scope(issue, mode),
-                }
-            )
-    return issues
+    return [
+        issue_payload(issue, mode=mode)
+        for mode, compatibility in report.compatibility.items()
+        for issue in compatibility.issues
+    ]
 
 
-def _scope(issue: PlanIssue, mode: str) -> dict[str, object]:
-    scope: dict[str, object] = {"mode": mode}
+def issue_payload(issue: PlanIssue, *, mode: str | None = None) -> dict[str, object]:
+    """Project a scoped issue without including supplied or generated values."""
+    scope: dict[str, object] = {}
+    if mode is not None:
+        scope["mode"] = mode
     if issue.table is not None:
         scope["table"] = issue.table.model_dump(by_alias=True)
     if issue.column is not None:
         scope["column"] = issue.column
     if issue.constraint is not None:
         scope["constraint"] = issue.constraint
-    return scope
+    if issue.ordinal is not None:
+        scope["ordinal"] = issue.ordinal
+    payload: dict[str, object] = {
+        "code": issue.code,
+        "message": issue.message,
+        "severity": issue.severity,
+    }
+    if scope:
+        payload["scope"] = scope
+    return payload
 
 
 def plan_lines(report: GenerationPlan) -> list[str]:

@@ -4,6 +4,7 @@ import re
 import warnings
 from pathlib import Path
 
+from sqlalchemy import URL
 from sqlalchemy.exc import SAWarning
 
 from seed.config import SeedConfig, load_config, resolve_database_url
@@ -61,9 +62,10 @@ def inspect_database(
     return report.model_copy(update={"tables": tables})
 
 
-def read_schema(config: SeedConfig, schema_name: str) -> DatabaseSchema:
+def read_schema(config: SeedConfig, schema_name: str, *, url: URL | None = None) -> DatabaseSchema:
     """Read a complete schema through the shared redaction boundary."""
-    url = parse_database_url(resolve_database_url(config))
+    if url is None:
+        url = parse_database_url(resolve_database_url(config))
     with read_session(url, config.database) as connection, warnings.catch_warnings():
         warnings.simplefilter("ignore", SAWarning)
         try:
