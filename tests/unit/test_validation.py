@@ -9,10 +9,10 @@ from test_planning import column
 from test_selection import sample
 
 from seed.config import SeedConfig
+from seed.generation.streaming import GeneratedRecord, GenerationError, RecordBatch
 from seed.metadata import DatabaseSchema
-from seed.planning import GenerationPlan, PlanIssue, PlanRequest, build_plan
-from seed.streaming import GeneratedRecord, GenerationError, RecordBatch
-from seed.validation import validate
+from seed.planning.plan import GenerationPlan, PlanIssue, PlanRequest, build_plan
+from seed.workflows.validate import validate
 
 
 def test_dataset_failure_keeps_prior_batch_count_and_scoped_ordinal(
@@ -48,7 +48,7 @@ def test_dataset_failure_keeps_prior_batch_count_and_scoped_ordinal(
         )
 
     monkeypatch.setattr(PlanRequest, "snapshot", snapshot)
-    monkeypatch.setattr("seed.validation.generate_batches", failed_batches)
+    monkeypatch.setattr("seed.workflows.validate.generate_batches", failed_batches)
     report = validate(PlanRequest(config, None, ["items"], 3, None, None), dataset=True)
     assert report.status == 4 and report.dataset.status == "failed"
     assert report.dataset.rows_checked == 1

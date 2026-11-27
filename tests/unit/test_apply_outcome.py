@@ -1,6 +1,6 @@
 """Commit acknowledgement and safe unknown outcomes."""
 
-from seed.insertion import commit_outcome
+from seed.postgres.insertion import commit_outcome
 
 
 def test_commit_is_attempted_only_once_without_exposing_transport_error() -> None:

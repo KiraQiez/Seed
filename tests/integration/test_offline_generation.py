@@ -6,8 +6,8 @@ from conftest import PostgresFixture
 from test_schema import snapshot
 
 from seed.config import parse_config
-from seed.generation import generate_batches
-from seed.planning import build_plan
+from seed.generation.engine import generate_batches
+from seed.planning.plan import build_plan
 
 
 def test_offline_rows_follow_reflected_constraints_and_leave_database_unchanged(

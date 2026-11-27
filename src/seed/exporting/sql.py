@@ -5,9 +5,9 @@ from typing import TextIO
 
 from psycopg.sql import Identifier
 
-from seed.dataset import json_value
+from seed.generation.streaming import GeneratedRecord, Value
 from seed.metadata import ColumnType, TableSchema
-from seed.streaming import GeneratedRecord, Value
+from seed.reporting.dataset import json_value
 
 type SqlRows = tuple[TableSchema, Iterable[GeneratedRecord]]
 

@@ -7,12 +7,12 @@ from typing import Literal
 
 from sqlalchemy import URL
 
-from seed.bindings import Binding, choose_binding
 from seed.config import SeedConfig, load_config
-from seed.dependencies import Dependency, KeySource, resolve_dependencies
-from seed.inspection import read_schema, requested_tables
 from seed.metadata import DatabaseSchema, ForeignKey, Metadata, TableId, TableSchema, Target
-from seed.selection import MAX_ROWS, resolve_selection, validate_row_override
+from seed.planning.bindings import Binding, choose_binding
+from seed.planning.dependencies import Dependency, KeySource, resolve_dependencies
+from seed.planning.selection import MAX_ROWS, resolve_selection, validate_row_override
+from seed.postgres.inspection import read_schema, requested_tables
 
 type Mode = Literal["live", "offline"]
 _MODES: tuple[Mode, ...] = ("live", "offline")

@@ -8,7 +8,8 @@ from test_planning import column
 from test_selection import sample
 
 from seed.config import SeedConfig, parse_config
-from seed.generation import generate_batches
+from seed.generation.engine import generate_batches
+from seed.generation.streaming import GeneratedRecord, GenerationError
 from seed.metadata import (
     ColumnSchema,
     DatabaseSchema,
@@ -19,8 +20,7 @@ from seed.metadata import (
     TableSchema,
     UniqueKey,
 )
-from seed.planning import build_plan
-from seed.streaming import GeneratedRecord, GenerationError
+from seed.planning.plan import build_plan
 
 BASE = 'version=1\n[database]\nurl_env="DATABASE_URL"\n[generation]\nnull_rate=0\n'
 
@@ -252,7 +252,7 @@ def test_nonnullable_unique_foreign_capacity_is_checked() -> None:
 
 
 def test_candidate_reservations_are_atomic_for_composite_keys() -> None:
-    from seed.record_checks import UniqueReservations, UniqueRule
+    from seed.generation.record_checks import UniqueReservations, UniqueRule
 
     tracked = UniqueReservations(
         (
@@ -271,7 +271,7 @@ def test_retries_collisions_without_exposing_candidate(monkeypatch: pytest.Monke
     table = schema.tables[0].model_copy(update={"columns": (column("code", "text"),)})
     schema = schema.model_copy(update={"tables": (table,)})
     config = parse_config(BASE + "[tables.items]\nrows=2\n[rules.items.code]\nunique=true\n")
-    monkeypatch.setattr("seed.generation.scalar_value", lambda *args: "private-candidate")
+    monkeypatch.setattr("seed.generation.engine.scalar_value", lambda *args: "private-candidate")
     with pytest.raises(GenerationError) as captured:
         list(records(schema, config, batch_size=1))
     assert captured.value.issue.code == "RETRY_EXHAUSTED"

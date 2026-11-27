@@ -18,8 +18,6 @@ from sqlalchemy.types import (
     Text,
 )
 
-from seed.catalog import enrich_table
-from seed.database import DatabaseError
 from seed.metadata import (
     Check,
     ColumnSchema,
@@ -34,6 +32,8 @@ from seed.metadata import (
     UniqueKey,
     digest,
 )
+from seed.postgres.catalog import enrich_table
+from seed.postgres.connection import DatabaseError
 
 
 def reflect_schema(

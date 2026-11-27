@@ -4,9 +4,9 @@ import json
 from collections.abc import Iterable
 from typing import TextIO
 
-from seed.dataset import DatasetColumn, JsonValue, dataset_header, dataset_row
+from seed.generation.streaming import GeneratedRecord
 from seed.metadata import TableId
-from seed.streaming import GeneratedRecord
+from seed.reporting.dataset import DatasetColumn, JsonValue, dataset_header, dataset_row
 
 type TabularRows = tuple[TableId, tuple[DatasetColumn, ...], Iterable[GeneratedRecord]]
 

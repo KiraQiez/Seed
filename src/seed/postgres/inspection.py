@@ -8,9 +8,9 @@ from sqlalchemy import URL
 from sqlalchemy.exc import SAWarning
 
 from seed.config import SeedConfig, load_config, resolve_database_url
-from seed.database import DatabaseError, parse_database_url, read_session
 from seed.metadata import DatabaseSchema
-from seed.schema import reflect_schema
+from seed.postgres.connection import DatabaseError, parse_database_url, read_session
+from seed.postgres.schema import reflect_schema
 
 _IDENTIFIER = r'(?:"(?:[^"]|"")*"|[^".]+)'
 _TABLE_NAME = re.compile(rf"({_IDENTIFIER})(?:\.({_IDENTIFIER}))?")

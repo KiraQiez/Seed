@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from seed.config import load_config
-from seed.initialize import initialize_config
+from seed.workflows.initialize import initialize_config
 
 
 def test_concurrent_initializers_publish_one_valid_file(tmp_path: Path) -> None:

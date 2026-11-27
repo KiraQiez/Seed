@@ -5,7 +5,7 @@ from conftest import PostgresFixture
 from sqlalchemy import text
 
 from seed.config import DatabaseConfig
-from seed.database import DatabaseError, parse_database_url, read_session
+from seed.postgres.connection import DatabaseError, parse_database_url, read_session
 
 
 def test_read_only_connection(postgres: PostgresFixture) -> None:

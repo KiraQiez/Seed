@@ -6,8 +6,8 @@ from decimal import Decimal
 
 from sqlalchemy import Connection, RowMapping, text
 
-from seed.database import DatabaseError
 from seed.metadata import Check, ColumnType, Feature, NumericBound, TableSchema, UniqueKey
+from seed.postgres.connection import DatabaseError
 
 _COLUMNS = """
 SELECT a.attname, a.attnum, a.attgenerated, col.collname,

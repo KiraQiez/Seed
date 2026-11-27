@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from seed.export_files import ExportFileError, export_directory
+from seed.exporting.files import ExportFileError, export_directory
 
 
 def test_existing_file_directory_and_symlink_are_preserved(tmp_path: Path) -> None:

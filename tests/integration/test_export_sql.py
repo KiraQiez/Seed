@@ -4,9 +4,9 @@ from io import StringIO
 
 from conftest import PostgresFixture
 
-from seed.export_sql import write_sql
+from seed.exporting.sql import write_sql
+from seed.generation.streaming import GeneratedRecord
 from seed.metadata import ColumnSchema, ColumnType, TableId, TableSchema
-from seed.streaming import GeneratedRecord
 
 
 def test_sql_preserves_quoted_names_typed_identity_and_hostile_text(

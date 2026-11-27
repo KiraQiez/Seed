@@ -6,12 +6,12 @@ import pytest
 from conftest import PostgresFixture
 from test_apply_safety import config_for
 
-from seed.apply import apply_preflight
-from seed.database import open_session, parse_database_url
-from seed.insertion import PostgreSQLWriter, execute_apply
+from seed.generation.streaming import RecordBatch
 from seed.metadata import TableSchema
-from seed.planning import PlanRequest
-from seed.streaming import RecordBatch
+from seed.planning.plan import PlanRequest
+from seed.postgres.apply_guard import apply_preflight
+from seed.postgres.connection import open_session, parse_database_url
+from seed.postgres.insertion import PostgreSQLWriter, execute_apply
 
 
 def test_append_checks_indexed_existing_keys_and_null_semantics(postgres: PostgresFixture) -> None:

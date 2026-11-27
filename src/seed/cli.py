@@ -11,17 +11,17 @@ from rich.text import Text
 from typer._click.exceptions import UsageError
 
 from seed import __version__
-from seed.apply_command import run_apply
 from seed.config import ConfigError
-from seed.database import DatabaseError
-from seed.export import ExportFormat, run_export
-from seed.initialize import initialize_config
-from seed.inspection import inspect_database
-from seed.inspection_output import inspection_lines
-from seed.plan_output import plan_issues, plan_lines
-from seed.planning import PlanRequest, plan_database
-from seed.preview import preview as preview_request
-from seed.validation import validate as validate_request
+from seed.planning.plan import PlanRequest, plan_database
+from seed.postgres.connection import DatabaseError
+from seed.postgres.inspection import inspect_database
+from seed.reporting.inspection import inspection_lines
+from seed.reporting.plan import plan_issues, plan_lines
+from seed.workflows.apply import run_apply
+from seed.workflows.export import ExportFormat, run_export
+from seed.workflows.initialize import initialize_config
+from seed.workflows.preview import preview as preview_request
+from seed.workflows.validate import validate as validate_request
 
 app = typer.Typer(
     help="Generate synthetic data for development and testing.",

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from seed.config import GeneratorRule, Scalar
 from seed.metadata import ColumnSchema, Metadata, NumericBound
-from seed.numeric import INTEGER_BITS, numeric_grid
+from seed.planning.numeric import INTEGER_BITS, numeric_grid
 
 _GENERIC = {
     **dict.fromkeys(INTEGER_BITS, "integer"),

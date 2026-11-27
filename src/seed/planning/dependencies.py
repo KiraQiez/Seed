@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from seed.metadata import ForeignKey
-from seed.selection import Selection
+from seed.planning.selection import Selection
 
 type KeySource = Literal["generated", "existing", "none", "null"]
 

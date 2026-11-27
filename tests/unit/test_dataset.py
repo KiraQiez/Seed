@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from seed.dataset import json_value
+from seed.reporting.dataset import json_value
 
 
 def test_dataset_scalar_serialization() -> None:

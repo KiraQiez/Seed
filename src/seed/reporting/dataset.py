@@ -5,8 +5,8 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
+from seed.generation.streaming import GeneratedRecord, Value
 from seed.metadata import TableId, TableSchema
-from seed.streaming import GeneratedRecord, Value
 
 type JsonValue = None | bool | int | str
 type JsonRow = tuple[JsonValue, ...]

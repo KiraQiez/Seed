@@ -120,9 +120,9 @@ def test_preview_samples_match_full_rows_and_preserve_composite_parent_pools(
     from test_schema import snapshot
 
     from seed.config import load_config
-    from seed.dataset import dataset_columns, dataset_row
-    from seed.generation import generate_batches
-    from seed.planning import build_plan
+    from seed.generation.engine import generate_batches
+    from seed.planning.plan import build_plan
+    from seed.reporting.dataset import dataset_columns, dataset_row
 
     postgres.sql("""
         CREATE SCHEMA preview_seed;

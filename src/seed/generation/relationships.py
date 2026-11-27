@@ -5,9 +5,9 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from itertools import islice
 
+from seed.generation.streaming import GeneratedRecord, GenerationError, RunContext, Value
 from seed.metadata import TableId, TableSchema
-from seed.planning import GenerationPlan, PlanIssue, PlannedDependency, PlannedTable
-from seed.streaming import GeneratedRecord, GenerationError, RunContext, Value
+from seed.planning.plan import GenerationPlan, PlanIssue, PlannedDependency, PlannedTable
 
 type KeyTuple = tuple[Value, ...]
 type PoolId = tuple[TableId, tuple[str, ...]]

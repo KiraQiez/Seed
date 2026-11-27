@@ -4,15 +4,11 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from functools import partial
 
-from seed.bindings import Binding, choose_binding
 from seed.config import GeneratorRule, SeedConfig
-from seed.metadata import ColumnSchema, DatabaseSchema, NumericBound, TableSchema
-from seed.planning import GenerationPlan, Mode, PlanIssue, PlannedTable
-from seed.record_checks import UniqueReservations, scalar_domain, value_matches
-from seed.relationships import ExistingKeys, ForeignKeys, ParentPools
-from seed.scalars import scalar_value
-from seed.selection import MAX_ROWS
-from seed.streaming import (
+from seed.generation.record_checks import UniqueReservations, scalar_domain, value_matches
+from seed.generation.relationships import ExistingKeys, ForeignKeys, ParentPools
+from seed.generation.scalars import scalar_value
+from seed.generation.streaming import (
     GeneratedRecord,
     GenerationError,
     RecordBatch,
@@ -22,6 +18,10 @@ from seed.streaming import (
     retry_row,
     validate_batch_size,
 )
+from seed.metadata import ColumnSchema, DatabaseSchema, NumericBound, TableSchema
+from seed.planning.bindings import Binding, choose_binding
+from seed.planning.plan import GenerationPlan, Mode, PlanIssue, PlannedTable
+from seed.planning.selection import MAX_ROWS
 
 type InsertBatch = Callable[[TableSchema, RecordBatch, tuple[str, ...]], RecordBatch]
 type ConflictProbe = Callable[[TableSchema, dict[str, Value]], bool]

@@ -3,9 +3,9 @@
 import pytest
 
 from seed.config import ConfigError, parse_config
-from seed.database import DatabaseError
 from seed.metadata import DatabaseSchema, TableId, TableSchema, Target
-from seed.selection import resolve_selection
+from seed.planning.selection import resolve_selection
+from seed.postgres.connection import DatabaseError
 
 _BASE = 'version=1\n[database]\nurl_env="DATABASE_URL"\n'
 

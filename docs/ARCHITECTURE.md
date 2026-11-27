@@ -26,7 +26,7 @@ flowchart LR
 
 ## Generation
 
-`seed.generation.generate_batches` is the internal offline entry point. It takes the typed plan, the matching schema snapshot, and the loaded config containing generator rules. Each batch belongs to one table. The engine keeps table-local ordinals for consumers and performs no database or filesystem operations. Preview and dataset validation use this engine.
+`seed.generation.engine.generate_batches` is the internal offline entry point. It takes the typed plan, the matching schema snapshot, and the loaded config containing generator rules. Each batch belongs to one table. The engine keeps table-local ordinals for consumers and performs no database or filesystem operations. Preview and dataset validation use this engine.
 
 1. Bind managed columns to foreign keys, explicit offline IDs, live server identities, or omission for computed columns. For the remaining columns, apply explicit rules within schema bounds, infer compatible column-name semantics, then fall back to the type generator. Reject incompatible explicit rules and unsupported writable columns.
 2. Each generator receives a typed column binding, row ordinal, private RNG, Faker locale, and reference time. It returns a typed scalar or a scoped issue. Normalize precision and check values before reserving unique tuples or emitting a batch.
@@ -44,7 +44,18 @@ flowchart LR
 
 ## Stack and layout
 
-Use CPython 3.12+, Typer and Rich for the terminal, Pydantic and `tomllib` for config, SQLAlchemy 2.x Core and Psycopg 3 for PostgreSQL, and Faker and the standard library for generation. Start with a small `src/seed/` package. Add focused application, schema, database, generation, validation, and export modules as needed. See the [development guide](DEVELOPMENT.md) for tooling and supported platforms.
+Seed uses CPython 3.12+, Typer and Rich for the CLI, Pydantic and `tomllib` for configuration, SQLAlchemy Core and Psycopg for PostgreSQL, and Faker for generation. The [development guide](DEVELOPMENT.md) covers tooling and supported platforms.
+
+In `src/seed/`, start with `cli.py` for CLI wiring, `config.py` for configuration, and `metadata.py` for shared schema models.
+
+| Package | Responsibility |
+|---|---|
+| `workflows/` | Configure and coordinate commands such as apply, export, preview, and validate. |
+| `postgres/` | Connect, inspect schema and catalogs, guard apply targets, and insert batches. |
+| `planning/` | Select tables, order dependencies, and choose column bindings. |
+| `generation/` | Generate batches, draw typed values, and enforce constraints and relationships. |
+| `reporting/` | Format inspection and plan results and project typed dataset values. |
+| `exporting/` | Serialize SQL, CSV, and JSON and publish files and manifests. |
 
 ## Decisions
 

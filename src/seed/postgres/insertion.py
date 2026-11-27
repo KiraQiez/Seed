@@ -7,13 +7,13 @@ from typing import Literal, cast
 from sqlalchemy import URL, Connection, MetaData, Table, insert, literal_column, select
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
-from seed.apply import ApprovedPlan, begin_guarded_write, rollback
 from seed.config import SeedConfig
-from seed.generation import LiveInputs, generate_live_batches
+from seed.generation.engine import LiveInputs, generate_live_batches
+from seed.generation.relationships import MAX_EXISTING_KEYS, KeyTuple
+from seed.generation.streaming import GeneratedRecord, GenerationError, RecordBatch, Value
 from seed.metadata import Metadata, TableId, TableSchema
-from seed.planning import PlanIssue, PlannedDependency, PlanRequest
-from seed.relationships import MAX_EXISTING_KEYS, KeyTuple
-from seed.streaming import GeneratedRecord, GenerationError, RecordBatch, Value
+from seed.planning.plan import PlanIssue, PlannedDependency, PlanRequest
+from seed.postgres.apply_guard import ApprovedPlan, begin_guarded_write, rollback
 
 type Outcome = Literal["not_started", "rolled_back", "committed", "unknown"]
 

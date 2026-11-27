@@ -2,9 +2,9 @@
 
 from test_selection import sample
 
-from seed.dependencies import resolve_dependencies
 from seed.metadata import ColumnSchema, ColumnType, ForeignKey, TableId
-from seed.selection import Selection
+from seed.planning.dependencies import resolve_dependencies
+from seed.planning.selection import Selection
 
 
 def key(name: str, parent: str) -> ForeignKey:

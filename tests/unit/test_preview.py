@@ -8,11 +8,11 @@ from test_planning import column
 from test_selection import sample
 
 from seed.config import SeedConfig, parse_config
-from seed.generation import generate_batches
+from seed.generation.engine import generate_batches
+from seed.generation.streaming import RecordBatch
 from seed.metadata import DatabaseSchema
-from seed.planning import GenerationPlan, build_plan
-from seed.preview import sample_tables
-from seed.streaming import RecordBatch
+from seed.planning.plan import GenerationPlan, build_plan
+from seed.workflows.preview import sample_tables
 
 
 def test_preview_generates_full_parent_pool_and_only_requested_leaf_prefix(
@@ -41,7 +41,7 @@ def test_preview_generates_full_parent_pool_and_only_requested_leaf_prefix(
             generated.append((batch[0].table.table, len(batch)))
             yield batch
 
-    monkeypatch.setattr("seed.preview.generate_batches", traced)
+    monkeypatch.setattr("seed.workflows.preview.generate_batches", traced)
     (child_sample,) = sample_tables(original, schema, config, 3)
     assert child_sample.table.table == "child" and len(child_sample.rows) == 3
     assert generated == [("parent", 40), ("child", 3)]

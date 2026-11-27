@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 
 from seed.config import ConfigError, SeedConfig, TableConfig
-from seed.database import DatabaseError
-from seed.inspection import requested_tables
 from seed.metadata import DatabaseSchema, TableSchema
+from seed.postgres.connection import DatabaseError
+from seed.postgres.inspection import requested_tables
 
 MAX_ROWS = 100_000
 

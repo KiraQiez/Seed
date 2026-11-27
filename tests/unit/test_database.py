@@ -3,7 +3,7 @@
 import pytest
 
 from seed.config import ConfigError
-from seed.database import parse_database_url
+from seed.postgres.connection import parse_database_url
 
 
 def test_connection_options_and_decoding() -> None:
@@ -44,7 +44,7 @@ def test_connection_timeout_is_structured() -> None:
     import socket
 
     from seed.config import DatabaseConfig
-    from seed.database import DatabaseError, read_session
+    from seed.postgres.connection import DatabaseError, read_session
 
     with socket.socket() as endpoint:
         endpoint.bind(("127.0.0.1", 0))

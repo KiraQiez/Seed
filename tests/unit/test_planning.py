@@ -5,7 +5,7 @@ from test_selection import sample
 
 from seed.config import parse_config
 from seed.metadata import ColumnSchema, ColumnType, Feature
-from seed.planning import build_plan
+from seed.planning.plan import build_plan
 
 _BASE = 'version=1\n[database]\nurl_env="DATABASE_URL"\n'
 

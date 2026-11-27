@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 from conftest import PostgresFixture
 
-from seed.apply import ApplyError, apply_preflight
 from seed.config import SeedConfig, parse_config
-from seed.database import open_session, parse_database_url
-from seed.planning import PlanRequest
+from seed.planning.plan import PlanRequest
+from seed.postgres.apply_guard import ApplyError, apply_preflight
+from seed.postgres.connection import open_session, parse_database_url
 
 
 def config_for(
@@ -64,7 +64,7 @@ def test_preflight_closes_read_snapshot_and_refuses_existing_rows(
 
 
 def test_guard_refuses_changes_after_preflight(postgres: PostgresFixture) -> None:
-    from seed.apply import begin_guarded_write
+    from seed.postgres.apply_guard import begin_guarded_write
 
     postgres.sql("""
         CREATE SCHEMA apply_changed_fixture;
@@ -103,7 +103,7 @@ def test_guard_checks_lock_permissions_and_times_out_behind_other_writer(
 ) -> None:
     from sqlalchemy import text
 
-    from seed.apply import begin_guarded_write
+    from seed.postgres.apply_guard import begin_guarded_write
 
     postgres.sql("""
         CREATE SCHEMA apply_lock_fixture;
@@ -145,7 +145,7 @@ def test_guard_checks_lock_permissions_and_times_out_behind_other_writer(
 def test_guard_rejects_lost_connections_and_replication_override(postgres: PostgresFixture) -> None:
     from sqlalchemy import text
 
-    from seed.apply import begin_guarded_write
+    from seed.postgres.apply_guard import begin_guarded_write
 
     postgres.sql("""
         CREATE SCHEMA apply_connection_fixture;

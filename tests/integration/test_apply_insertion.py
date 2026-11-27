@@ -5,10 +5,10 @@ from pathlib import Path
 from conftest import PostgresFixture
 from test_apply_safety import config_for
 
-from seed.apply import apply_preflight
-from seed.database import open_session, parse_database_url
-from seed.insertion import WriteResult, execute_apply
-from seed.planning import PlanRequest
+from seed.planning.plan import PlanRequest
+from seed.postgres.apply_guard import apply_preflight
+from seed.postgres.connection import open_session, parse_database_url
+from seed.postgres.insertion import WriteResult, execute_apply
 
 
 def run_apply(postgres: PostgresFixture, schema: str, tables: str) -> WriteResult:

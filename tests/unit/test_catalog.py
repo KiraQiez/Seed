@@ -2,7 +2,7 @@
 
 import pytest
 
-from seed.catalog import numeric_bounds
+from seed.postgres.catalog import numeric_bounds
 
 
 def test_numeric_comparisons_and_quoted_identifiers() -> None:

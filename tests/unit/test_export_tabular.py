@@ -2,10 +2,10 @@ import json
 from decimal import Decimal
 from io import StringIO
 
-from seed.dataset import DatasetColumn
-from seed.export_tabular import write_csv, write_json
+from seed.exporting.tabular import write_csv, write_json
+from seed.generation.streaming import GeneratedRecord
 from seed.metadata import TableId
-from seed.streaming import GeneratedRecord
+from seed.reporting.dataset import DatasetColumn
 
 
 def test_csv_distinguishes_null_text_and_embedded_record_separators() -> None:

@@ -12,7 +12,7 @@ from uuid import UUID
 from faker import Faker
 
 from seed.metadata import TableId
-from seed.planning import PlanIssue, PlanSettings
+from seed.planning.plan import PlanIssue, PlanSettings
 
 type Value = None | bool | int | str | Decimal | date | datetime | UUID
 type RecordBatch = tuple[GeneratedRecord, ...]

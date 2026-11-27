@@ -8,9 +8,9 @@ from test_planning import column
 from test_streaming import SETTINGS, TABLE
 
 from seed.config import GeneratorRule
+from seed.generation.scalars import scalar_value
+from seed.generation.streaming import RunContext
 from seed.metadata import ColumnType, NumericBound
-from seed.scalars import scalar_value
-from seed.streaming import RunContext
 
 
 def test_decimal_open_bounds_and_scale_are_exact() -> None:
@@ -66,7 +66,7 @@ def test_temporal_window_and_declared_timestamp_precision() -> None:
 
 
 def test_semantic_bindings_and_reserved_contact_values() -> None:
-    from seed.bindings import choose_binding
+    from seed.planning.bindings import choose_binding
 
     context = RunContext(SETTINGS, TABLE)
     email = column("email_address", "varchar").model_copy(

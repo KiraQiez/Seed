@@ -11,11 +11,11 @@ from sqlalchemy.engine import Transaction
 from sqlalchemy.exc import SAWarning, SQLAlchemyError
 
 from seed.config import ConfigError, SeedConfig
-from seed.database import DatabaseError, read_snapshot
-from seed.inspection import requested_tables
 from seed.metadata import Inspection, TableId
-from seed.planning import GenerationPlan, PlanRequest, build_plan
-from seed.schema import reflect_schema
+from seed.planning.plan import GenerationPlan, PlanRequest, build_plan
+from seed.postgres.connection import DatabaseError, read_snapshot
+from seed.postgres.inspection import requested_tables
+from seed.postgres.schema import reflect_schema
 
 
 class ApplyError(DatabaseError):

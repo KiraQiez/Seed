@@ -2,9 +2,14 @@
 
 import pytest
 
-from seed.apply import ApplyError, check_target, confirm_apply, validate_apply_options
 from seed.config import ConfigError, parse_config
-from seed.database import parse_database_url
+from seed.postgres.apply_guard import (
+    ApplyError,
+    check_target,
+    confirm_apply,
+    validate_apply_options,
+)
+from seed.postgres.connection import parse_database_url
 
 _BASE = 'version=1\n[database]\nurl_env="SEED_TEST_URL"\nschema="My.Schema"\n'
 _TARGET = """

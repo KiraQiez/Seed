@@ -3,7 +3,9 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from seed.apply import (
+from seed.config import ConfigError, resolve_database_url
+from seed.planning.plan import GenerationPlan, PlanIssue, PlanRequest
+from seed.postgres.apply_guard import (
     ApplyError,
     apply_preflight,
     check_target,
@@ -11,11 +13,9 @@ from seed.apply import (
     preflight_lines,
     validate_apply_options,
 )
-from seed.config import ConfigError, resolve_database_url
-from seed.database import DatabaseError, open_session, parse_database_url
-from seed.insertion import InsertionResult, execute_apply
-from seed.plan_output import issue_payload
-from seed.planning import GenerationPlan, PlanIssue, PlanRequest
+from seed.postgres.connection import DatabaseError, open_session, parse_database_url
+from seed.postgres.insertion import InsertionResult, execute_apply
+from seed.reporting.plan import issue_payload
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,7 @@
 
 import json
 
-from seed.planning import GenerationPlan, PlanIssue
+from seed.planning.plan import GenerationPlan, PlanIssue
 
 
 def plan_issues(report: GenerationPlan) -> list[dict[str, object]]:

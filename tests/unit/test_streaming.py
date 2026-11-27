@@ -6,9 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from seed.metadata import TableId
-from seed.planning import PlanSettings
-from seed.streaming import (
+from seed.generation.streaming import (
     MAX_ATTEMPTS,
     GeneratedRecord,
     GenerationError,
@@ -16,6 +14,8 @@ from seed.streaming import (
     batches,
     retry_row,
 )
+from seed.metadata import TableId
+from seed.planning.plan import PlanSettings
 
 TABLE = TableId(schema="test", table="items")
 SETTINGS = PlanSettings(

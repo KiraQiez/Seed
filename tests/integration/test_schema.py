@@ -3,9 +3,9 @@
 from conftest import PostgresFixture
 
 from seed.config import DatabaseConfig
-from seed.database import parse_database_url, read_session
 from seed.metadata import Inspection
-from seed.schema import reflect_schema
+from seed.postgres.connection import parse_database_url, read_session
+from seed.postgres.schema import reflect_schema
 
 
 def snapshot(postgres: PostgresFixture, schema: str) -> Inspection:
