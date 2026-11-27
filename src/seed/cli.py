@@ -66,36 +66,24 @@ def init(
         created = initialize_config(config)
     except (OSError, ConfigError) as error:
         code = "CONFIG_INVALID" if isinstance(error, ConfigError) else "INIT_FAILED"
+        status = 2 if isinstance(error, ConfigError) else 6
         if as_json:
-            typer.echo(
-                json.dumps(
-                    {
-                        "version": 1,
-                        "command": "init",
-                        "ok": False,
-                        "data": None,
-                        "issues": [{"code": code, "severity": "error", "message": str(error)}],
-                    }
-                )
+            _json_response(
+                "init",
+                status,
+                None,
+                [
+                    {"code": code, "severity": "error", "message": str(error)},
+                ],
             )
         else:
             diagnostic(str(error))
-        raise typer.Exit(2 if isinstance(error, ConfigError) else 6) from None
+        raise typer.Exit(status) from None
 
     if verbose:
         diagnostic("Created a starter configuration." if created else "Existing file preserved.")
     if as_json:
-        typer.echo(
-            json.dumps(
-                {
-                    "version": 1,
-                    "command": "init",
-                    "ok": True,
-                    "data": {"path": str(config), "created": created},
-                    "issues": [],
-                }
-            )
-        )
+        _json_response("init", 0, {"path": str(config), "created": created}, [])
     else:
         result("Created seed configuration." if created else "Seed configuration already exists.")
 
@@ -121,16 +109,13 @@ def inspect(
         code = error.code if isinstance(error, DatabaseError) else "CONFIG_INVALID"
         status = error.status if isinstance(error, DatabaseError) else 2
         if as_json:
-            typer.echo(
-                json.dumps(
-                    {
-                        "version": 1,
-                        "command": "inspect",
-                        "ok": False,
-                        "data": None,
-                        "issues": [{"code": code, "severity": "error", "message": str(error)}],
-                    }
-                )
+            _json_response(
+                "inspect",
+                status,
+                None,
+                [
+                    {"code": code, "severity": "error", "message": str(error)},
+                ],
             )
         else:
             diagnostic(str(error))
@@ -139,7 +124,7 @@ def inspect(
     if verbose:
         diagnostic("Completed schema inspection in a read-only transaction.")
     if as_json:
-        issues = [
+        issues: list[dict[str, object]] = [
             {
                 "code": code,
                 "severity": "warning",
@@ -149,16 +134,13 @@ def inspect(
             for item in report.tables
             for code in item.issues
         ]
-        typer.echo(
-            json.dumps(
-                {
-                    "version": 1,
-                    "command": "inspect",
-                    "ok": True,
-                    "data": {"schema": report.model_dump(mode="json", by_alias=True)},
-                    "issues": issues,
-                }
-            )
+        _json_response(
+            "inspect",
+            0,
+            {
+                "schema": report.model_dump(mode="json", by_alias=True),
+            },
+            issues,
         )
     else:
         result("\n".join(inspection_lines(report)))
@@ -191,16 +173,13 @@ def plan(
         code = error.code if isinstance(error, DatabaseError) else "CONFIG_INVALID"
         status = error.status if isinstance(error, DatabaseError) else 2
         if as_json:
-            typer.echo(
-                json.dumps(
-                    {
-                        "version": 1,
-                        "command": "plan",
-                        "ok": False,
-                        "data": None,
-                        "issues": [{"code": code, "severity": "error", "message": str(error)}],
-                    }
-                )
+            _json_response(
+                "plan",
+                status,
+                None,
+                [
+                    {"code": code, "severity": "error", "message": str(error)},
+                ],
             )
         else:
             diagnostic(str(error))
@@ -209,16 +188,13 @@ def plan(
     if verbose:
         diagnostic("Built the plan from a read-only schema snapshot.")
     if as_json:
-        typer.echo(
-            json.dumps(
-                {
-                    "version": 1,
-                    "command": "plan",
-                    "ok": report.executable,
-                    "data": {"plan": report.model_dump(mode="json", by_alias=True)},
-                    "issues": plan_issues(report),
-                }
-            )
+        _json_response(
+            "plan",
+            0 if report.executable else 4,
+            {
+                "plan": report.model_dump(mode="json", by_alias=True),
+            },
+            plan_issues(report),
         )
     else:
         result("\n".join(plan_lines(report)))
@@ -243,6 +219,11 @@ def _json_response(
             }
         )
     )
+
+
+def _render_issue(issue: dict[str, object]) -> None:
+    scope = " · " + json.dumps(issue["scope"]) if "scope" in issue else ""
+    diagnostic(f"{issue['code']} · {issue['message']}{scope}")
 
 
 @app.command()
@@ -275,7 +256,7 @@ def validate(
             )
             result(f"{name} · {stage.status}{count}")
         for issue in report.issues():
-            diagnostic(f"{issue['code']} · {issue['message']}")
+            _render_issue(issue)
     if report.status:
         raise typer.Exit(report.status)
 
@@ -313,7 +294,7 @@ def preview(
             result("\n".join(lines))
         if report.status:
             for issue in report.issues:
-                diagnostic(f"{issue['code']} · {issue['message']}")
+                _render_issue(issue)
     if report.status:
         raise typer.Exit(report.status)
 

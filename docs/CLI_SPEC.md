@@ -1,6 +1,6 @@
 # CLI specification
 
-Help, version, `init`, `inspect`, and `plan` are available. Generation, validation, apply, and export are planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
+Help, version, `init`, `inspect`, `plan`, `preview`, and `validate` are available. Apply and export are planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
 
 ## Commands
 
@@ -9,7 +9,7 @@ Help, version, `init`, `inspect`, and `plan` are available. Generation, validati
 | `seed init` | Common options only | Create a starter configuration with no embedded credentials. Publish the complete file exclusively on filesystems that support hard links. An existing regular file yields `created: false`; directories and symlinks yield a file error. |
 | `seed inspect` | `--schema NAME`, repeatable `--table NAME` | Show tables, columns, types, PKs, FKs, defaults and constraints, and their capability classifications. Inspect filters the display without expanding parents. Its fingerprint describes the selected schema before display filtering. |
 | `seed plan` | Selection and generation overrides | Report requested and required tables, counts, key sources, dependency order, generators, operation-specific compatibility, and warnings. |
-| `seed preview` | Selection and generation overrides, `--limit N` | Generate an offline sample and show its plan and validation issues. Show up to `N` rows per explicitly selected table, default 5 and maximum 100. Parent rows required for correct key pools are generated as needed. |
+| `seed preview` | Selection and generation overrides, `--limit N` | Generate an offline sample and show its plan and validation issues. Show up to `N` rows per explicitly selected table, default 5 and allowed range 1–100. Parents needed for sampled descendants generate their full key pools. Output still respects the sample limit. |
 | `seed validate` | Selection and generation overrides, `--dataset` | Check the configuration and selected schema for generation compatibility. `--dataset` also generates and validates the entire offline dataset in batches, discards rows, and reports counts and issues for each stage. |
 | `seed apply` | Selection and generation overrides, `--dry-run`, `--yes` | Preflight the live plan, request confirmation for a real write, and report committed counts. Dry-run stops after the read-only preflight. Combining `--dry-run` with `--yes` is a usage error. |
 | `seed export` | Selection and generation overrides, required `--format sql\|csv\|json`, `--output DIR` | Write the selected offline format to a new directory, `./seed-export` by default, and report its artifact inventory. |
@@ -17,6 +17,8 @@ Help, version, `init`, `inspect`, and `plan` are available. Generation, validati
 All commands accept `--config PATH` (default `./seed.toml`), `--json`, and `--verbose`. Selection and generation overrides are `--schema`, repeatable `--table`, `--rows`, `--random-seed`, and `--locale`. `--rows` requires exactly one `--table`. Verbose diagnostics go to stderr. Previewed rows are a prefix of the equivalent export for that table. Live apply uses actual returned server keys. [Configuration precedence and name syntax](DATA_MODEL.md#configuration)
 
 `inspect` succeeds when it can classify metadata, even when it finds unsupported features. `plan` and base `validate` report issues by affected mode and fail when both live and offline generation are blocked. A blocked `plan` returns status 4 with the partial plan in `data.plan`, and its issues identify the affected mode. Planning reads schema metadata in a read-only transaction. `preview`, dataset validation, and `export` require a usable offline plan. Apply and its dry-run require a usable live plan. Model all three validation stages as `passed`, `failed`, or `skipped` with distinct diagnostics.
+
+In `validate --dataset`, a live-only plan passes the plan stage and fails the offline dataset stage. `rows_checked` counts rows in successfully received batches, so a failed batch contributes zero rows. An issue can identify the failing row by its table-local ordinal. Preview shows a bounded sample. Full validation can find problems beyond that sample.
 
 ## Confirmation and output channels
 

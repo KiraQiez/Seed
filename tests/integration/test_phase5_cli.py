@@ -184,3 +184,35 @@ def test_preview_samples_match_full_rows_and_preserve_composite_parent_pools(
     unusable = invoke("preview", path, postgres.url, "--limit", "0", "--json")
     assert unusable.returncode == 2
     assert postgres.sql(query) == before
+
+
+def test_live_only_plan_blocks_offline_consumers(
+    postgres: PostgresFixture,
+    tmp_path: Path,
+) -> None:
+    postgres.sql("""
+        CREATE SCHEMA preview_live_only;
+        CREATE TABLE preview_live_only.parent (id integer PRIMARY KEY);
+        CREATE TABLE preview_live_only.child (
+            parent_id integer NOT NULL REFERENCES preview_live_only.parent (id)
+        );
+    """)
+    config = tmp_path / "seed.toml"
+    config.write_text(
+        'version=1\n[database]\nurl_env="SEED_TEST_URL"\nschema="preview_live_only"\n'
+        "[tables.parent]\nrows=0\nreuse_existing=true\n[tables.child]\nrows=1\n",
+        encoding="utf-8",
+    )
+    base = invoke("validate", config, postgres.url, "--json")
+    assert base.returncode == 0
+    assert json.loads(base.stdout)["data"]["dataset"]["status"] == "skipped"
+    full = invoke("validate", config, postgres.url, "--dataset", "--json")
+    assert full.returncode == 4
+    stages = json.loads(full.stdout)["data"]
+    assert stages["plan"]["status"] == "passed"
+    assert stages["dataset"]["status"] == "failed"
+    assert stages["dataset"]["rows_checked"] == 0
+    assert stages["dataset"]["issues"][0]["code"] == "PLAN_BLOCKED"
+    sample = invoke("preview", config, postgres.url, "--json")
+    assert sample.returncode == 4
+    assert json.loads(sample.stdout)["data"]["tables"] == []
