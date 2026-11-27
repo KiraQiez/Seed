@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phase 1 is complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1 and 2 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -45,21 +45,26 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 2 Connectivity and schema inspection
 
-- [ ] **SEED-201 · Provision disposable PostgreSQL test fixtures** · P0
+- [x] **SEED-201 · Provision disposable PostgreSQL test fixtures** · P0
   - **Dependencies** `SEED-105` · **Requirements** `NFR-003`, `NFR-005`
   - Add isolated Compose and pytest fixtures with generated credentials, loopback access, and owned teardown. **Verify.** `just test-integration` starts and cleans up its own database. Exercise each planned major and verify fixture failure closes safely.
-- [ ] **SEED-202 · Resolve and connect to PostgreSQL** · P0
+  - **Verified.** Disposable Compose fixtures passed locally and in CI on PostgreSQL 15–19. The suite verified fixture identity and teardown. An invalid major was refused before Docker startup.
+- [x] **SEED-202 · Resolve and connect to PostgreSQL** · P0
   - **Dependencies** `SEED-103`, `SEED-201` · **Requirements** `FR-001`, `NFR-003`
   - Parse the configured URL, enforce endpoint and TLS rules, implement timeouts and read-only sessions, and map connection errors to redacted issues. **Verify.** `just test-integration` checks the selected database and read-only state. Unit tests reject unsupported URL options and ensure both output modes redact secrets.
-- [ ] **SEED-203 · Reflect and normalize schema metadata** · P1
+  - **Verified.** Connection tests verified explicit endpoint and TLS options, a redacted authentication failure and timeout, and read-only repeatable-read state.
+- [x] **SEED-203 · Reflect and normalize schema metadata** · P1
   - **Dependencies** `SEED-202` · **Requirements** `FR-002`, `NFR-004`
   - Add normalized models and SQLAlchemy Core reflection for columns, types, constraints, and keys, including ordered composite metadata. **Verify.** `just test-integration` compares enum, key tuple, nullability, and type metadata with fixtures. Serialization and fingerprint ordering are stable.
-- [ ] **SEED-204 · Classify PostgreSQL-specific capabilities** · P0
+  - **Verified.** Reflection tests verified exact quoted identifiers, composite key order, enum label order, nullability, type modifiers, and stable fingerprints.
+- [x] **SEED-204 · Classify PostgreSQL-specific capabilities** · P0
   - **Dependencies** `SEED-203` · **Requirements** `FR-002`, `NFR-003`
   - Supplement reflection with catalog features, make structural and live fingerprints, and implement the support matrix including trusted numeric shape recognition. **Verify.** `just test-integration` distinguishes ordinary and specialized constraints, sequence ownership, generated columns, triggers, and missing metadata on supported majors.
-- [ ] **SEED-205 · Expose read-only schema inspection** · P1
+  - **Verified.** Catalog tests distinguished numeric bounds from unsupported checks, ordinary uniqueness from specialized indexes, and identity, owned serial, generated, trigger, and row policy metadata. Private definition changes altered only the private digest.
+- [x] **SEED-205 · Expose read-only schema inspection** · P1
   - **Dependencies** `SEED-102`, `SEED-204` · **Requirements** `FR-002`, `FR-009`
   - Implement `inspect` rendering and safe serialized schema output, with display filtering. **Verify.** `just test-integration` verifies read-only inspection and correct classifications. CLI tests compare `inspect --json` with the versioned envelope.
+  - **Verified.** Installed CLI tests verified terminal and JSON output, display filtering, redaction, and unchanged fixture rows and sequence state. Forty unit tests and all 13 quality and integration jobs passed. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46024866602)
 
 ### Phase 3 Dependency resolution and planning
 

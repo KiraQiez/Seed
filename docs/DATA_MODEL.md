@@ -59,7 +59,7 @@ For live-only parent reuse, set `rows = 0` and `reuse_existing = true` under tha
 
 ## PostgreSQL support
 
-The planned PostgreSQL 15–19 classifications are **MVP**, **Partial**, **Detected only**, and **Future**. Inspect reports each feature's classification. Plan blocks the affected mode when required metadata cannot be verified. Unrelated tables do not block a selection.
+The planned PostgreSQL 15–19 classifications are **MVP**, **Partial**, **Detected only**, and **Future**. Inspect reports feature classifications and preserves the full-schema fingerprint when the display is filtered. Plan blocks the affected mode when required metadata cannot be verified. Unrelated tables do not block a selection.
 
 | Feature | Status | Planned boundary |
 |---|---|---|
