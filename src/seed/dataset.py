@@ -26,11 +26,15 @@ class TableSample:
 
     def payload(self) -> dict[str, object]:
         """Return the version-1 tabular representation."""
-        return {
-            "table": self.table.model_dump(by_alias=True),
-            "columns": [{"name": column.name, "type": column.type} for column in self.columns],
-            "rows": self.rows,
-        }
+        return {**dataset_header(self.table, self.columns), "rows": self.rows}
+
+
+def dataset_header(table: TableId, columns: tuple[DatasetColumn, ...]) -> dict[str, object]:
+    """Describe a table and the ordered positions of its dataset columns."""
+    return {
+        "table": table.model_dump(by_alias=True),
+        "columns": [{"name": column.name, "type": column.type} for column in columns],
+    }
 
 
 def dataset_columns(table: TableSchema) -> tuple[DatasetColumn, ...]:
