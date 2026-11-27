@@ -3,6 +3,8 @@
 import subprocess
 import sys
 
+from rich.text import Text
+
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -16,7 +18,7 @@ def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
 def test_help() -> None:
     completed = run_cli("--help")
     assert completed.returncode == 0
-    assert "--version" in completed.stdout
+    assert "--version" in Text.from_ansi(completed.stdout).plain
     assert completed.stderr == ""
 
 
