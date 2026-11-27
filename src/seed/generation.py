@@ -9,7 +9,7 @@ from seed.config import GeneratorRule, SeedConfig
 from seed.metadata import ColumnSchema, DatabaseSchema, NumericBound, TableSchema
 from seed.planning import GenerationPlan, Mode, PlanIssue, PlannedTable
 from seed.record_checks import UniqueReservations, scalar_domain, value_matches
-from seed.relationships import ForeignKeys, ParentPools
+from seed.relationships import ExistingKeys, ForeignKeys, ParentPools
 from seed.scalars import scalar_value
 from seed.selection import MAX_ROWS
 from seed.streaming import (
@@ -24,6 +24,14 @@ from seed.streaming import (
 )
 
 type InsertBatch = Callable[[TableSchema, RecordBatch, tuple[str, ...]], RecordBatch]
+type ConflictProbe = Callable[[TableSchema, dict[str, Value]], bool]
+
+
+@dataclass(frozen=True)
+class LiveInputs:
+    insert: InsertBatch
+    existing: ExistingKeys | None = None
+    conflicts: ConflictProbe | None = None
 
 
 @dataclass(frozen=True)
@@ -49,10 +57,10 @@ def generate_live_batches(
     plan: GenerationPlan,
     schema: DatabaseSchema,
     config: SeedConfig,
-    insert: InsertBatch,
+    inputs: LiveInputs,
 ) -> Iterator[RecordBatch]:
     """Generate live rows and correlate the committed-to-transaction batch from the adapter."""
-    yield from _generate(plan, schema, config, "live", None, insert)
+    yield from _generate(plan, schema, config, "live", None, inputs)
 
 
 def _generate(
@@ -61,7 +69,7 @@ def _generate(
     config: SeedConfig,
     mode: Mode,
     batch_size: int | None,
-    insert: InsertBatch | None,
+    inputs: LiveInputs | None,
 ) -> Iterator[RecordBatch]:
     if (
         plan.schema_fingerprint != schema.fingerprint
@@ -86,7 +94,7 @@ def _generate(
         )
     size = plan.settings.batch_size if batch_size is None else batch_size
     validate_batch_size(size)
-    yield from _table_batches(plan, schema, config, size, mode, insert)
+    yield from _table_batches(plan, schema, config, size, mode, inputs)
 
 
 def _table_batches(
@@ -95,10 +103,10 @@ def _table_batches(
     config: SeedConfig,
     size: int,
     mode: Mode,
-    insert: InsertBatch | None,
+    inputs: LiveInputs | None,
 ) -> Iterator[RecordBatch]:
     tables = {table.id: table for table in schema.tables}
-    pools = ParentPools(plan)
+    pools = ParentPools(plan, inputs.existing if inputs else None)
     for planned in plan.tables:
         if not planned.rows:
             continue
@@ -113,6 +121,7 @@ def _table_batches(
         pending = frozenset(identities)
         writable = tuple(item for item in columns if item.binding.column not in pending)
         context = RunContext(plan.settings, planned.id)
+        conflicts = inputs.conflicts if inputs else None
         foreign = ForeignKeys.prepare(planned, table, pools, context)
         uniqueness = UniqueReservations.for_table(
             table,
@@ -154,6 +163,7 @@ def _table_batches(
                         if key not in pending
                     )
                 )
+                or (conflicts is not None and conflicts(table, values))
                 or not uniqueness.reserve(values)
             ):
                 return None
@@ -166,7 +176,7 @@ def _table_batches(
                 yield record
 
         for batch in batches(accepted_rows(), size):
-            completed = insert(table, batch, identities) if insert is not None else batch
+            completed = inputs.insert(table, batch, identities) if inputs is not None else batch
             if len(completed) != len(batch):
                 raise _binding_error(planned)
             for original, record in zip(batch, completed, strict=True):

@@ -1,7 +1,9 @@
-"""Retain and consume only the parent keys required by the offline plan."""
+"""Retain and consume only the parent keys required by the plan."""
 
 from collections import Counter, defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from itertools import islice
 
 from seed.metadata import TableId, TableSchema
 from seed.planning import GenerationPlan, PlanIssue, PlannedDependency, PlannedTable
@@ -9,6 +11,8 @@ from seed.streaming import GeneratedRecord, GenerationError, RunContext, Value
 
 type KeyTuple = tuple[Value, ...]
 type PoolId = tuple[TableId, tuple[str, ...]]
+type ExistingKeys = Callable[[PlannedDependency], Iterable[KeyTuple]]
+MAX_EXISTING_KEYS = 10_000
 
 
 def _pool_id(edge: PlannedDependency) -> PoolId:
@@ -27,19 +31,44 @@ class KeyPool:
 
 
 class ParentPools:
-    """Own generated key tuples for an entire run."""
+    """Own referenced key tuples for an entire run."""
 
-    def __init__(self, plan: GenerationPlan) -> None:
-        self._remaining = Counter(
-            _pool_id(edge)
+    def __init__(self, plan: GenerationPlan, existing: ExistingKeys | None = None) -> None:
+        edges = [
+            edge
             for table in plan.tables
             if table.rows
             for edge in table.dependencies
-            if edge.source == "generated"
-        )
+            if edge.source in {"generated", "existing"}
+        ]
+        self._remaining = Counter(_pool_id(edge) for edge in edges)
         self._retained: dict[TableId, dict[tuple[str, ...], KeyPool]] = defaultdict(dict)
-        for table, columns in self._remaining:
-            self._retained[table][columns] = KeyPool()
+        for edge in edges:
+            parent, columns = _pool_id(edge)
+            if columns in self._retained[parent]:
+                continue
+            pool = KeyPool()
+            if edge.source == "existing":
+                if existing is None:
+                    raise GenerationError(
+                        PlanIssue(
+                            code="PARENT_KEYS_EXHAUSTED",
+                            message="No existing parent key source is available.",
+                            table=parent,
+                        )
+                    )
+                for values in islice(existing(edge), MAX_EXISTING_KEYS):
+                    pool.add(values)
+                if not pool.values:
+                    raise GenerationError(
+                        PlanIssue(
+                            code="PARENT_KEYS_EXHAUSTED",
+                            message="The existing parent key pool is empty.",
+                            table=parent,
+                            constraint=edge.foreign_key.name,
+                        )
+                    )
+            self._retained[parent][columns] = pool
 
     def accept(self, record: GeneratedRecord) -> None:
         """Register the accepted record's non-null referenced tuples."""
@@ -53,7 +82,7 @@ class ParentPools:
     def finish(self, table: PlannedTable) -> None:
         """Release pools whose last consumer has finished."""
         for edge in table.dependencies:
-            if edge.source == "generated":
+            if edge.source in {"generated", "existing"}:
                 key = _pool_id(edge)
                 self._remaining[key] -= 1
                 if self._remaining[key] == 0:
@@ -111,11 +140,11 @@ class ForeignKeys:
             key = edge.foreign_key
             if edge.source == "null":
                 continue
-            if edge.source != "generated":
-                raise state._error(key.name, "No offline parent key source is available.")
+            if edge.source not in {"generated", "existing"}:
+                raise state._error(key.name, "No parent key source is available.")
             pool = pools.for_edge(edge)
             if not pool.values:
-                raise state._error(key.name, "The generated parent key pool is empty.")
+                raise state._error(key.name, "The parent key pool is empty.")
             columns = frozenset(key.columns)
             if columns in unique_keys:
                 null_allowed = state._allows_null(edge)
@@ -158,7 +187,10 @@ class ForeignKeys:
             if all(value is None for value in key):
                 if edge.source != "null" and not self._allows_null(edge):
                     return False
-            elif edge.source != "generated" or key not in self.pools.for_edge(edge).members:
+            elif (
+                edge.source not in {"generated", "existing"}
+                or key not in self.pools.for_edge(edge).members
+            ):
                 return False
         return True
 

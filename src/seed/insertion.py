@@ -1,17 +1,18 @@
 """Insert generated batches inside one guarded PostgreSQL transaction."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from sqlalchemy import URL, Connection, MetaData, Table, insert, literal_column
+from sqlalchemy import URL, Connection, MetaData, Table, insert, literal_column, select
 from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 
 from seed.apply import ApprovedPlan, begin_guarded_write, rollback
 from seed.config import SeedConfig
-from seed.generation import generate_live_batches
+from seed.generation import LiveInputs, generate_live_batches
 from seed.metadata import Metadata, TableId, TableSchema
-from seed.planning import PlanIssue, PlanRequest
+from seed.planning import PlanIssue, PlannedDependency, PlanRequest
+from seed.relationships import MAX_EXISTING_KEYS, KeyTuple
 from seed.streaming import GeneratedRecord, GenerationError, RecordBatch, Value
 
 type Outcome = Literal["not_started", "rolled_back", "committed", "unknown"]
@@ -111,6 +112,44 @@ class PostgreSQLWriter:
             for record, row in zip(batch, rows, strict=True)
         )
 
+    def load_existing(self, edge: PlannedDependency) -> Iterator[KeyTuple]:
+        """Read one bounded, stable set of whole non-null referenced keys."""
+        foreign = edge.foreign_key
+        table = self.table(foreign.parent)
+        columns = [table.c[name] for name in foreign.parent_columns]
+        statement = (
+            select(*columns)
+            .where(*(column.is_not(None) for column in columns))
+            .order_by(*columns)
+            .limit(MAX_EXISTING_KEYS)
+        )
+        for row in self.connection.execute(statement):
+            yield cast(KeyTuple, tuple(row))
+
+    def conflicts(self, model: TableSchema, values: dict[str, Value]) -> bool:
+        """Probe only existing database-backed keys with typed indexed predicates."""
+        specs: list[tuple[tuple[str, ...], bool]] = []
+        if model.primary_key:
+            specs.append((model.primary_key.columns, False))
+        specs.extend(
+            (key.columns, bool(key.nulls_distinct)) for key in model.unique_keys if key.supported
+        )
+        table = self.table(model.id)
+        for columns, nulls_distinct in specs:
+            if any(name not in values for name in columns):
+                continue
+            if nulls_distinct and any(values[name] is None for name in columns):
+                continue
+            predicates = [
+                table.c[name].is_(None) if values[name] is None else table.c[name] == values[name]
+                for name in columns
+            ]
+            if self.connection.scalar(
+                select(select(literal_column("1")).select_from(table).where(*predicates).exists())
+            ):
+                return True
+        return False
+
 
 def execute_apply(
     connection: Connection,
@@ -123,9 +162,14 @@ def execute_apply(
     transaction = begin_guarded_write(connection, url, config, request, approved)
     writer = PostgreSQLWriter(connection)
     counts: dict[TableId, int] = {}
+    inputs = LiveInputs(
+        insert=writer.write,
+        existing=writer.load_existing,
+        conflicts=writer.conflicts if config.safety.allow_existing_data else None,
+    )
     try:
         for batch in generate_live_batches(
-            approved.plan, approved.inspection.schema, config, writer.write
+            approved.plan, approved.inspection.schema, config, inputs
         ):
             identifier = batch[0].table
             counts[identifier] = counts.get(identifier, 0) + len(batch)
