@@ -82,7 +82,7 @@ The core uses typed models. Ordered collections serialize as arrays. `?` marks a
 |---|---|
 | `TableId`, `Target` | `TableId` carries exact `schema` and `table` strings. `Target` carries `host`, integer `port`, `database`, and `schema`. |
 | `DatabaseSchema` | `target`, integer `server_major`, names of visible `schemas`, ordered `tables`, and a structural `fingerprint`. |
-| `TableSchema`, `ColumnSchema` | Table identity, relation kind, ordered columns, optional primary key, FK/unique/check lists, features, and issues. Columns carry name, ordinal, type, nullability, default kind, and optional identity/generated kind. Types carry relevant modifiers, collation, enum labels, and precision. |
+| `TableSchema`, `ColumnSchema` | Table identity, relation kind, ordered columns, optional primary key, FK/unique/check lists, features, and issues. Columns carry name, ordinal, type, nullability, default kind, and optional identity/generated kind and owned sequence maximum. Types carry relevant modifiers, collation, enum labels, and precision. |
 | Keys and checks | Keys carry a name and ordered columns. FKs add the parent table and ordered referenced columns with equal arity, match mode, validation and deferrability flags, and referential actions. Uniques add their source and null semantics. Checks carry validation flags, capability, and normalized typed bounds where recognized. |
 | `GenerationPlan` | `target`, `schema_fingerprint`, effective settings, `total_rows`, and ordered table plans. Each table gives identity, requested flag, rows, parents, key source, and ordered live/offline bindings. Each mode reports its executable flag and issues. |
 | `GeneratedRecord` | `table`, zero-based `ordinal`, and ordered column `values`. Values are null, bool, int, string, Decimal, date, datetime, or UUID. Absent columns are omitted from writes. |
@@ -90,6 +90,8 @@ The core uses typed models. Ordered collections serialize as arrays. `?` marks a
 | `ValidationResult` | `status` of `passed`, `failed`, or `skipped`, `issues`, and optional integer `rows_checked`. |
 | `InsertionResult` | `outcome` of `committed`, `rolled_back`, `not_started`, or `unknown`. Include per-table counts only after acknowledged commit. |
 | `ExportResult` | `format`, `directory`, `manifest`, relative artifact paths, and per-table counts. Return after manifest publication. |
+
+Planning reports existing-parent requirements from schema metadata. The live phase must verify that reusable keys exist. A partial plan lists the ordered tables first, then unresolved tables in qualified-name order when a cycle blocks ordering. Bindings identify the selected source and generator and omit configured literal values from public output.
 
 Fingerprint canonical structural metadata with SHA-256 over ordered UTF-8 JSON. Exclude credentials, endpoint, catalog object IDs, and raw database expressions from the public fingerprint. Compare catalog identities and a private digest of relevant definitions during the live recheck. See the [CLI envelope](CLI_SPEC.md#json-contract).
 

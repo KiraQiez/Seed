@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1 and 2 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–3 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -68,18 +68,22 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 3 Dependency resolution and planning
 
-- [ ] **SEED-301 · Resolve table selections and row counts** · P1
+- [x] **SEED-301 · Resolve table selections and row counts** · P1
   - **Dependencies** `SEED-103`, `SEED-203` · **Requirements** `FR-003`
   - Resolve exact table names, schema-qualified CLI input, configured selections, and effective counts. **Verify.** `uv run pytest tests/unit` covers precedence, quoting, wrong qualifiers, zero rows, and unknown tables.
-- [ ] **SEED-302 · Analyze dependency graphs** · P0
+  - **Verified.** Unit tests verified exact and quoted names, selection and count precedence, unknown names, zero counts, and reuse conflicts.
+- [x] **SEED-302 · Analyze dependency graphs** · P0
   - **Dependencies** `SEED-204`, `SEED-301` · **Requirements** `FR-003`
   - Expand required parents and compute stable parent-first ordering with issues for missing or unsupported edges. **Verify.** `uv run pytest tests/unit` covers multi-parent junctions, composite edges, filtered selection, missing parents, self references, and cycles.
-- [ ] **SEED-303 · Build generation plans** · P1
+  - **Verified.** Unit tests verified stable multi-parent order, preserved composite tuple order, cycle and unresolved-parent diagnostics, and terminal or always-null dependencies.
+- [x] **SEED-303 · Build generation plans** · P1
   - **Dependencies** `SEED-302` · **Requirements** `FR-003`, `FR-006`, `NFR-002`
   - Build typed plans with effective settings, table counts, planned bindings, mode-specific key sources, and issues. **Verify.** `uv run pytest tests/unit` checks stable plans, an estimated 26,500-row total for the reference fixture, row limits, and mode-specific rejection.
-- [ ] **SEED-304 · Expose the plan command** · P1
+  - **Verified.** Unit tests verified a stable 26,500-row e-commerce plan, the post-expansion row limit, mode-specific parent and sequence constraints, and compatible generator rules.
+- [x] **SEED-304 · Expose the plan command** · P1
   - **Dependencies** `SEED-205`, `SEED-303` · **Requirements** `FR-003`, `FR-009`
   - Render the plan, including dependency counts, bindings, and warnings, in terminal and JSON. **Verify.** `just test-integration` exercises a valid plan and a blocked plan. Confirm read-only execution and documented statuses and outputs.
+  - **Verified.** Installed CLI tests verified terminal and JSON plans, exit statuses, and unchanged fixture rows and sequences. All 53 unit tests and all eight integration tests on each PostgreSQL major 15–19 passed locally. All 13 hosted jobs passed. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46026242024)
 
 ### Phase 4 Data generation
 
