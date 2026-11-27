@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phase 1 starts after approval of the planning package. A task is eligible after its dependencies are complete.
+Phase 1 is complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -38,9 +38,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
   - **Dependencies** `SEED-102`, `SEED-103` · **Requirements** `FR-001`, `FR-009`
   - Add `init` with a validated starter file and exclusive creation. **Verify.** Run `uv run pytest tests/unit`. Repeated `init` leaves original bytes intact and handles an existing symlink or directory safely.
   - **Verified.** Twenty-one unit cases passed on Python 3.15, including concurrent publication, idempotence, JSON output, and symlink and directory refusal.
-- [ ] **SEED-105 · Establish developer quality gates** · P0
+- [x] **SEED-105 · Establish developer quality gates** · P0
   - **Dependencies** `SEED-102`, `SEED-103` · **Requirements** `NFR-004`, `NFR-005`
   - Configure pytest, Ruff, Mypy, Just, and GitHub Actions for lint, typing, unit tests, and builds. **Verify.** Run the documented direct quality commands and their Just equivalents. CI exercises the planned Python matrix with no database required.
+  - **Verified.** `just setup`, `just check`, and `just build` passed locally. All eight Linux, macOS, and Windows jobs passed the lock, lint, format, type, unit, build, and isolated wheel smoke checks. [Staging CI](https://github.com/KiraQiez/Seed/actions/runs/46021869681)
 
 ### Phase 2 Connectivity and schema inspection
 

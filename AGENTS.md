@@ -1,6 +1,6 @@
 # Agent instructions for Seed
 
-Seed is a standalone, schema-aware PostgreSQL seeder for development and testing. The repository is at the documentation review gate. Phase 1 starts after approval.
+Seed is a standalone, schema-aware PostgreSQL seeder for development and testing. The roadmap records verified work and dependencies. Check the task scope before starting the next phase.
 
 ## Read in order
 
