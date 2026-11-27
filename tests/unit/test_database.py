@@ -38,3 +38,21 @@ def test_invalid_urls_are_redacted(value: str) -> None:
 def test_rejects_libpq_override() -> None:
     with pytest.raises(ConfigError, match="libpq"):
         parse_database_url("postgresql://u:p@127.0.0.1/db", {"PGHOSTADDR": "private"})
+
+
+def test_connection_timeout_is_structured() -> None:
+    import socket
+
+    from seed.config import DatabaseConfig
+    from seed.database import DatabaseError, read_session
+
+    with socket.socket() as endpoint:
+        endpoint.bind(("127.0.0.1", 0))
+        endpoint.listen()
+        port = endpoint.getsockname()[1]
+        url = parse_database_url(f"postgresql://user:secret@127.0.0.1:{port}/test", {})
+        config = DatabaseConfig(url_env="SEED_TEST_URL", connect_timeout=2)
+        with pytest.raises(DatabaseError) as caught, read_session(url, config):
+            pytest.fail("a TCP listener cannot respond to the PostgreSQL handshake")
+        assert caught.value.code == "CONNECTION_TIMEOUT"
+        assert "secret" not in str(caught.value)

@@ -11,7 +11,10 @@ from typer._click.exceptions import UsageError
 
 from seed import __version__
 from seed.config import ConfigError
+from seed.database import DatabaseError
 from seed.initialize import initialize_config
+from seed.inspection import inspect_database
+from seed.inspection_output import inspection_lines
 
 app = typer.Typer(
     help="Generate synthetic data for development and testing.",
@@ -91,6 +94,70 @@ def init(
         )
     else:
         result("Created seed configuration." if created else "Seed configuration already exists.")
+
+
+@app.command()
+def inspect(
+    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
+        "./seed.toml"
+    ),
+    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
+    table: Annotated[
+        list[str] | None, typer.Option("--table", help="Limit displayed tables.")
+    ] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", help="Show additional diagnostics.")
+    ] = False,
+) -> None:
+    """Inspect one PostgreSQL schema in a read-only transaction."""
+    try:
+        report = inspect_database(config, schema, table or [])
+    except (ConfigError, DatabaseError) as error:
+        code = error.code if isinstance(error, DatabaseError) else "CONFIG_INVALID"
+        status = error.status if isinstance(error, DatabaseError) else 2
+        if as_json:
+            typer.echo(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "command": "inspect",
+                        "ok": False,
+                        "data": None,
+                        "issues": [{"code": code, "severity": "error", "message": str(error)}],
+                    }
+                )
+            )
+        else:
+            diagnostic(str(error))
+        raise typer.Exit(status) from None
+
+    if verbose:
+        diagnostic("Completed schema inspection in a read-only transaction.")
+    if as_json:
+        issues = [
+            {
+                "code": code,
+                "severity": "warning",
+                "message": "A schema feature is outside the supported generation subset.",
+                "scope": {"table": item.id.model_dump(by_alias=True)},
+            }
+            for item in report.tables
+            for code in item.issues
+        ]
+        typer.echo(
+            json.dumps(
+                {
+                    "version": 1,
+                    "command": "inspect",
+                    "ok": True,
+                    "data": {"schema": report.model_dump(mode="json", by_alias=True)},
+                    "issues": issues,
+                }
+            )
+        )
+    else:
+        result("\n".join(inspection_lines(report)))
 
 
 def main() -> int:

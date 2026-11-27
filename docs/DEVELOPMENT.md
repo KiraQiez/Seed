@@ -11,7 +11,7 @@ Run `just setup` to sync the lockfile. Run `just check` for lock consistency, li
 | Lint and format | `uv run ruff check .` and `uv run ruff format --check .` |
 | Types | `uv run mypy src tests` |
 | Unit | `uv run pytest tests/unit` |
-| PostgreSQL integration | Planned `just test-integration` |
+| PostgreSQL integration | `just test-integration` |
 | Installed database CLI workflows | Planned `just test-e2e` |
 | Build and smoke test | `uv build`, then install the wheel in isolation and run `seed --version`, `seed --help`, and `seed init` |
 
@@ -20,6 +20,8 @@ Linux CI exercises Python 3.12–3.15 and PostgreSQL 15–19 on current supporte
 ## Test structure and fixtures
 
 Use `tests/unit/` for pure models, config, dependency graphs, generators, serialization, and redaction. Use `tests/integration/` for real metadata, driver behavior, transactions and concurrency. Use `tests/e2e/` for the installed CLI, statuses, and output. Both database suites use a unique, loopback-only Compose project with generated credentials and owned teardown. Fail closed if fixture identity is unclear. Never fall back to an application `DATABASE_URL`.
+
+Inspection tests use PostgreSQL 17 by default. Set `SEED_TEST_POSTGRES_MAJOR` to a supported major from 15 through 19 for a local run. The recipe requires a running local Docker daemon and Compose.
 
 Keep simple users, e-commerce, tickets, junction tables, composite parent keys, cycles, and unsupported features in `tests/fixtures/`. Include quoted identifiers, nullable keys, unsupported constraints, ordinary and specialized indexes, and distinct source and empty import schemas.
 
