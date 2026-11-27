@@ -1,6 +1,6 @@
 # CLI specification
 
-Help, version, `init`, and `inspect` are available. Planning, generation, validation, apply, and export are planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
+Help, version, `init`, `inspect`, and `plan` are available. Generation, validation, apply, and export are planned. `seed --help` lists the commands, `seed COMMAND --help` shows supported options, and `seed --version` prints the package version. Place command options after the subcommand. Commands take no positional arguments. Help and version are plain text informational requests.
 
 ## Commands
 
@@ -16,7 +16,7 @@ Help, version, `init`, and `inspect` are available. Planning, generation, valida
 
 All commands accept `--config PATH` (default `./seed.toml`), `--json`, and `--verbose`. Selection and generation overrides are `--schema`, repeatable `--table`, `--rows`, `--random-seed`, and `--locale`. `--rows` requires exactly one `--table`. Verbose diagnostics go to stderr. Previewed rows are a prefix of the equivalent export for that table. Live apply uses actual returned server keys. [Configuration precedence and name syntax](DATA_MODEL.md#configuration)
 
-`inspect` succeeds when it can classify metadata, even when it finds unsupported features. `plan` and base `validate` report issues by affected mode and fail when both live and offline generation are blocked. `preview`, dataset validation, and `export` require a usable offline plan. Apply and its dry-run require a usable live plan. Model all three validation stages as `passed`, `failed`, or `skipped` with distinct diagnostics.
+`inspect` succeeds when it can classify metadata, even when it finds unsupported features. `plan` and base `validate` report issues by affected mode and fail when both live and offline generation are blocked. A blocked `plan` returns status 4 with the partial plan in `data.plan`, and its issues identify the affected mode. Planning reads schema metadata in a read-only transaction. `preview`, dataset validation, and `export` require a usable offline plan. Apply and its dry-run require a usable live plan. Model all three validation stages as `passed`, `failed`, or `skipped` with distinct diagnostics.
 
 ## Confirmation and output channels
 
