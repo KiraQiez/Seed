@@ -277,3 +277,23 @@ def test_retries_collisions_without_exposing_candidate(monkeypatch: pytest.Monke
     assert captured.value.issue.code == "RETRY_EXHAUSTED"
     assert captured.value.issue.ordinal == 1
     assert "private-candidate" not in str(captured.value)
+
+
+def test_mixed_null_foreign_key_keeps_complete_tuple() -> None:
+    schema = sample("child", "parent")
+    child, parent = schema.tables
+    parent = parent.model_copy(update={"columns": (column("a"), column("b"))})
+    child = child.model_copy(
+        update={
+            "columns": (column("x").model_copy(update={"nullable": True}), column("y")),
+            "foreign_keys": (foreign_key(parent, ("x", "y"), ("a", "b")),),
+        }
+    )
+    schema = schema.model_copy(update={"tables": (child, parent)})
+    config = parse_config(
+        BASE.replace("null_rate=0", "null_rate=1")
+        + "[tables.child]\nrows=2\n[tables.parent]\nrows=1\n"
+    )
+    parent_record, *children = records(schema, config)
+    expected = (parent_record.values["a"], parent_record.values["b"])
+    assert all((row.values["x"], row.values["y"]) == expected for row in children)

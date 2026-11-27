@@ -26,6 +26,8 @@ flowchart LR
 
 ## Generation
 
+`seed.generation.generate_batches` is the internal offline entry point. It takes the typed plan, the matching schema snapshot, and the loaded config containing generator rules. Each batch belongs to one table. The engine keeps table-local ordinals for consumers and performs no database or filesystem operations. Preview and dataset validation use this engine in Phase 5.
+
 1. Bind managed columns to foreign keys, explicit offline IDs, live server identities, or omission for computed columns. For the remaining columns, apply explicit rules within schema bounds, infer compatible column-name semantics, then fall back to the type generator. Reject incompatible explicit rules and unsupported writable columns.
 2. Each generator receives a typed column binding, row ordinal, private RNG, Faker locale, and reference time. It returns a typed scalar or a scoped issue. Normalize precision and check values before reserving unique tuples or emitting a batch.
 3. Use SHA-256-derived streams keyed by the seed, qualified table, binding, and algorithm version. Seed local RNG and Faker instances, derive UUIDs from controlled bits, and generate dates within the 365 days ending at the configured reference time. Keep draws independent of batch boundaries. Generator versions, server-computed values, and relevant existing state affect reproducibility.
