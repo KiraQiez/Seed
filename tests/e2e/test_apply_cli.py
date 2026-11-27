@@ -121,13 +121,14 @@ def test_apply_dry_run_refusal_commit_and_opted_in_append(
     )
 
 
-@pytest.mark.skipif(os.name == "nt", reason="POSIX terminal test")
 @pytest.mark.parametrize("reply", [b"n\n", b"\x04"])
 def test_actual_terminal_decline_and_eof(
     postgres: PostgresFixture,
     tmp_path: Path,
     reply: bytes,
 ) -> None:
+    if sys.platform == "win32":
+        pytest.skip("POSIX terminal test")
     postgres.sql("""
         CREATE SCHEMA IF NOT EXISTS apply_terminal;
         CREATE TABLE IF NOT EXISTS apply_terminal.items (id integer);
