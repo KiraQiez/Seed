@@ -13,9 +13,9 @@ Run `just setup` to sync the lockfile. Run `just check` for lock consistency, li
 | Unit | `uv run pytest tests/unit` |
 | PostgreSQL integration | `just test-integration` |
 | Installed database CLI workflows | `just test-e2e` |
-| Build and smoke test | `uv build`, then install the wheel in isolation and run `seed --version`, `seed --help`, and `seed init` |
+| Build and smoke test | `uv build`, then `uv run --locked python tests/package_smoke.py dist` to rebuild from the sdist and check both isolated wheel installs |
 
-Linux CI exercises Python 3.12–3.15 and PostgreSQL 15–19 on current supported patch releases. Run full end-to-end checks on minimum and latest combinations. macOS and Windows run portable checks, builds, and clean installation smoke tests. Review platform-specific driver requirements and upstream support before each release. [Python version status](https://devguide.python.org/versions/) · [PostgreSQL version policy](https://www.postgresql.org/support/versioning/)
+Linux CI exercises Python 3.12–3.15 and PostgreSQL 15–19 on current supported patch releases. Run the database suites on Python 3.12 with all five PostgreSQL majors and on Python 3.15 with PostgreSQL 19. macOS and Windows run portable checks, builds, and clean installation smoke tests. Review platform-specific driver requirements and upstream support before each release. [Python version status](https://devguide.python.org/versions/) · [PostgreSQL version policy](https://www.postgresql.org/support/versioning/)
 
 ## Test structure and fixtures
 
@@ -37,6 +37,6 @@ Drive additional checks from the [roadmap](ROADMAP.md#implementation-checklist) 
 
 ## Benchmark
 
-Use the [26,500-row e-commerce fixture](PRD.md#mvp-workflow) with identity parents, an enum, composite unique key, and simple numeric checks. Use an idle Linux runner with 4 vCPUs, 8 GiB RAM, Python 3.12, and local Docker PostgreSQL 16. Record patches and dependency versions, reset the schema each run, and use locale `en_US`, seed `42`, the default reference time, and batches of 1,000.
+Run `just benchmark` on an idle Docker host with at least 4 vCPUs and 8 GiB available. It builds a Linux image with Python 3.12, starts a disposable PostgreSQL 16 database, and runs the [26,500-row e-commerce fixture](../tests/fixtures/ecommerce.sql) in a network-isolated container capped at 4 vCPUs and 8 GiB. The harness checks those limits, records versions, resets the schema for each trial, and uses locale `en_US`, seed `42`, the default reference time, and batches of 1,000.
 
-Measure apply and offline JSON export separately over three trials, from CLI startup to success. Target at most **60 seconds median** and **256 MiB peak CLI RSS** per path, with all 26,500 rows and zero broken references. Record the highest sampled RSS. Measure append separately and record lock time and collision-probe cost. These are proposed gates until benchmark measurements are available.
+Measure apply and offline JSON export separately over three trials, from CLI startup to success. Target at most **60 seconds median** and **256 MiB peak CLI RSS** per path, with all 26,500 rows and zero broken references. Record the highest sampled RSS. The harness checks both targets and measures append separately on a primed fixture. Append reports total lock SQL time and collision-probe count and time. The staging benchmark job logs the complete report.

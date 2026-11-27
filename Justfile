@@ -16,3 +16,6 @@ test-integration:
 
 test-e2e:
     uv run --locked pytest tests/e2e
+
+benchmark:
+    sh tests/benchmark/run.sh
