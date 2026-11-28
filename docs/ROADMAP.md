@@ -198,10 +198,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
   - **Dependencies** `SEED-902` · **Requirements** `NFR-005`, `NFR-006`
   - Prepare the protected GitHub Actions build and PyPI Trusted Publishing workflow with artifact hashes and scoped permission. **Verify.** Run a staged release, with TestPyPI if approved. Verify that tested packages match the intended artifacts and that the publish job alone can request its OIDC token.
   - **Verified.** The staging rehearsal passed artifact and checksum validation, PostgreSQL tests against the release wheel, clean uv and pipx installs, and temporary tap installs on Apple Silicon, Intel macOS, and Linux x86-64. GitHub's tag-only `pypi` environment requires KiraQiez review, and only the PyPI job can request OIDC. [Release rehearsal](https://github.com/KiraQiez/Seed/actions/runs/46087685951) · [Quality matrix](https://github.com/KiraQiez/Seed/actions/runs/46087685821)
-- [ ] **SEED-904 · Publish the approved release** · P0
+- [x] **SEED-904 · Publish the approved release** · P0
   - **Dependencies** `SEED-903` · **Requirements** `NFR-005`
   - After release authorization, create the tag and GitHub Release and publish corresponding artifacts to PyPI. **Verify.** Compare published hashes and install the published version in a clean environment. Verify executable version, help, and config initialization.
-  - **Pending.** The verified candidate is on `main`. Publication requires the PyPI account owner to register the pending trusted publisher and approve the tagged deployment. [Publisher setup](RELEASE.md#release-checklist)
+  - **Verified.** The public wheel and sdist from PyPI and GitHub matched the tested artifacts byte for byte. Clean uv and pipx installs passed version, help, and configuration initialization. [GitHub Release](https://github.com/KiraQiez/Seed/releases/tag/v0.1.0) · [PyPI](https://pypi.org/project/seed-dev-db/0.1.0/) · [Release run](https://github.com/KiraQiez/Seed/actions/runs/46091747798)
 - [ ] **SEED-905 · Release the Homebrew tap** · P1
   - **Dependencies** `SEED-904` · **Requirements** `NFR-005`
   - Author and publish the approved maintainer-owned tap formula tied to an artifact checksum. **Verify.** Test tap installation and run the documented CLI smoke checks on supported Homebrew platforms.
