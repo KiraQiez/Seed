@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from rich.console import Console
+from rich.console import Console, RenderableType
 from rich.text import Text
 from typer._click.exceptions import UsageError
 
@@ -15,16 +15,61 @@ from seed.config import ConfigError
 from seed.planning.plan import PlanRequest, plan_database
 from seed.postgres.connection import DatabaseError
 from seed.postgres.inspection import inspect_database
-from seed.reporting.inspection import inspection_lines
+from seed.reporting.inspection import inspection_lines, safe_text
 from seed.reporting.plan import plan_issues, plan_lines
+from seed.reporting.terminal import (
+    apply_summary,
+    export_summary,
+    inspection_summary,
+    plan_summary,
+    preview_summary,
+    validation_summary,
+)
 from seed.workflows.apply import run_apply
 from seed.workflows.export import ExportFormat, run_export
 from seed.workflows.initialize import guided_starter, initialize_config
 from seed.workflows.preview import preview as preview_request
 from seed.workflows.validate import validate as validate_request
 
+ConfigOption = Annotated[
+    Path,
+    typer.Option(
+        "--config", rich_help_panel="Connection and selection", help="Configuration path."
+    ),
+]
+SchemaOption = Annotated[
+    str | None,
+    typer.Option("--schema", rich_help_panel="Connection and selection", help="Exact schema name."),
+]
+TableOption = Annotated[
+    list[str] | None,
+    typer.Option("--table", rich_help_panel="Connection and selection", help="Select tables."),
+]
+RowsOption = Annotated[
+    int | None,
+    typer.Option("--rows", rich_help_panel="Generation", help="Override one table's count."),
+]
+SeedOption = Annotated[
+    int | None,
+    typer.Option(
+        "--random-seed", rich_help_panel="Generation", help="Use a seed to repeat generation."
+    ),
+]
+LocaleOption = Annotated[
+    str | None,
+    typer.Option("--locale", rich_help_panel="Generation", help="Locale for generated values."),
+]
+JsonOption = Annotated[
+    bool, typer.Option("--json", rich_help_panel="Output", help="Emit a JSON result.")
+]
+VerboseOption = Annotated[
+    bool,
+    typer.Option("--verbose", rich_help_panel="Output", help="Show additional diagnostics."),
+]
+
 app = typer.Typer(
-    help="Generate synthetic data for development and testing.",
+    help="Generate test data for PostgreSQL.",
+    epilog="First run: seed init --interactive, set DATABASE_URL, then run seed preview.",
     no_args_is_help=True,
     invoke_without_command=True,
     add_completion=False,
@@ -32,9 +77,9 @@ app = typer.Typer(
 )
 
 
-def result(message: str) -> None:
+def result(message: RenderableType) -> None:
     """Write a result to stdout."""
-    Console().print(Text(message))
+    Console().print(Text(message) if isinstance(message, str) else message)
 
 
 def diagnostic(message: str) -> None:
@@ -48,23 +93,31 @@ def root(
         False, "--version", is_eager=True, help="Show the package version."
     ),
 ) -> None:
-    """Work with Seed configurations and datasets."""
+    """Generate test data for PostgreSQL."""
     if version:
         result(__version__)
         raise typer.Exit()
 
 
-@app.command()
+@app.command(rich_help_panel="Setup")
 def init(
-    config: Annotated[Path, typer.Option("--config", help="Starter configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[
-        bool, typer.Option("--verbose", help="Show additional diagnostics.")
-    ] = False,
+    config: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            rich_help_panel="Connection and selection",
+            help="Starter configuration path.",
+        ),
+    ] = Path("./seed.toml"),
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
     interactive: Annotated[
-        bool, typer.Option("--interactive", help="Choose tables and row counts with prompts.")
+        bool,
+        typer.Option(
+            "--interactive",
+            rich_help_panel="Setup",
+            help="Choose tables and row counts with prompts.",
+        ),
     ] = False,
 ) -> None:
     """Create a starter configuration."""
@@ -88,7 +141,7 @@ def init(
                 ],
             )
         else:
-            diagnostic(str(error))
+            _render_issue({"code": code, "severity": "error", "message": str(error)})
         raise typer.Exit(status) from None
 
     if verbose:
@@ -119,21 +172,20 @@ def _guided_setup() -> str:
     return guided_starter(prompt, diagnostic)
 
 
-@app.command()
+@app.command(rich_help_panel="Review data")
 def inspect(
-    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
+    config: ConfigOption = Path("./seed.toml"),
+    schema: SchemaOption = None,
     table: Annotated[
-        list[str] | None, typer.Option("--table", help="Limit displayed tables.")
+        list[str] | None,
+        typer.Option(
+            "--table", rich_help_panel="Connection and selection", help="Limit displayed tables."
+        ),
     ] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[
-        bool, typer.Option("--verbose", help="Show additional diagnostics.")
-    ] = False,
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
 ) -> None:
-    """Inspect one PostgreSQL schema in a read-only transaction."""
+    """See the tables and columns in your database."""
     try:
         report = inspect_database(config, schema, table or [])
     except (ConfigError, DatabaseError) as error:
@@ -149,7 +201,7 @@ def inspect(
                 ],
             )
         else:
-            diagnostic(str(error))
+            _render_issue({"code": code, "severity": "error", "message": str(error)})
         raise typer.Exit(status) from None
 
     if verbose:
@@ -173,24 +225,26 @@ def inspect(
             },
             issues,
         )
-    else:
+    elif table:
         result("\n".join(inspection_lines(report)))
+    else:
+        result(inspection_summary(report))
+        if verbose:
+            diagnostic("\n".join(inspection_lines(report)))
 
 
-@app.command()
+@app.command(rich_help_panel="Review data")
 def plan(
-    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
-    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
-    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
-    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
-    locale: Annotated[str | None, typer.Option("--locale")] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose")] = False,
+    config: ConfigOption = Path("./seed.toml"),
+    schema: SchemaOption = None,
+    table: TableOption = None,
+    rows: RowsOption = None,
+    random_seed: SeedOption = None,
+    locale: LocaleOption = None,
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
 ) -> None:
-    """Plan generation from a read-only schema snapshot."""
+    """See which tables Seed will fill and how many rows it will generate."""
     try:
         report = plan_database(
             config,
@@ -213,7 +267,7 @@ def plan(
                 ],
             )
         else:
-            diagnostic(str(error))
+            _render_issue({"code": code, "severity": "error", "message": str(error)})
         raise typer.Exit(status) from None
 
     if verbose:
@@ -228,7 +282,11 @@ def plan(
             plan_issues(report),
         )
     else:
-        result("\n".join(plan_lines(report)))
+        result(plan_summary(report))
+        for issue in plan_issues(report):
+            _render_issue(issue)
+        if verbose:
+            diagnostic("\n".join(plan_lines(report)))
     if not report.executable:
         raise typer.Exit(4)
 
@@ -252,26 +310,42 @@ def _json_response(
     )
 
 
+_HINTS = {
+    "CONFIG_INVALID": "Check seed.toml and the environment variable named in database.url_env.",
+    "CONNECTION_FAILED": "Check the connection URL and confirm that PostgreSQL is running.",
+    "CONNECTION_TIMEOUT": "Check that PostgreSQL is reachable from this terminal.",
+    "TARGET_REQUIRED": "Set the target in seed.toml, then run seed apply --dry-run.",
+    "TARGET_MISMATCH": "Compare the configured target with your database URL and selected schema.",
+    "TARGET_NOT_EMPTY": "Use an empty test table, or save the generated rows with seed export.",
+    "OUTPUT_EXISTS": "Choose a fresh directory with --output.",
+    "CONFIRMATION_REQUIRED": "Run seed apply from a terminal to review and confirm the write.",
+}
+
+
 def _render_issue(issue: dict[str, object]) -> None:
+    code = str(issue["code"])
+    severity = "Warning" if issue["severity"] == "warning" else "Error"
     scope = " · " + json.dumps(issue["scope"]) if "scope" in issue else ""
-    diagnostic(f"{issue['code']} · {issue['message']}{scope}")
+    diagnostic(safe_text(f"{severity} [{code}] {issue['message']}{scope}"))
+    if hint := _HINTS.get(code):
+        diagnostic(hint)
 
 
-@app.command()
+@app.command(rich_help_panel="Review data")
 def validate(
-    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
-    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
-    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
-    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
-    locale: Annotated[str | None, typer.Option("--locale")] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose")] = False,
-    dataset: Annotated[bool, typer.Option("--dataset", help="Validate all offline rows.")] = False,
+    config: ConfigOption = Path("./seed.toml"),
+    schema: SchemaOption = None,
+    table: TableOption = None,
+    rows: RowsOption = None,
+    random_seed: SeedOption = None,
+    locale: LocaleOption = None,
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
+    dataset: Annotated[
+        bool, typer.Option("--dataset", rich_help_panel="Checks", help="Validate all offline rows.")
+    ] = False,
 ) -> None:
-    """Validate configuration, schema compatibility, and optional offline rows."""
+    """Check your setup, plan, and optionally all generated rows."""
     report = validate_request(
         PlanRequest(config, schema, table or [], rows, locale, random_seed),
         dataset=dataset,
@@ -281,32 +355,29 @@ def validate(
     if as_json:
         _json_response("validate", report.status, report.payload(), report.issues())
     else:
-        for name, stage in report.stages().items():
-            count = (
-                f" · {stage.rows_checked} rows checked" if stage.rows_checked is not None else ""
-            )
-            result(f"{name} · {stage.status}{count}")
+        result(validation_summary(report))
         for issue in report.issues():
             _render_issue(issue)
     if report.status:
         raise typer.Exit(report.status)
 
 
-@app.command()
+@app.command(rich_help_panel="Review data")
 def preview(
-    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
-    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
-    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
-    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
-    locale: Annotated[str | None, typer.Option("--locale")] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose")] = False,
-    limit: Annotated[int, typer.Option("--limit", help="Rows to show per requested table.")] = 5,
+    config: ConfigOption = Path("./seed.toml"),
+    schema: SchemaOption = None,
+    table: TableOption = None,
+    rows: RowsOption = None,
+    random_seed: SeedOption = None,
+    locale: LocaleOption = None,
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", rich_help_panel="Output", help="Rows to show per requested table."),
+    ] = 5,
 ) -> None:
-    """Show an offline sample from a read-only schema snapshot."""
+    """Preview sample rows without writing to the database."""
     report = preview_request(
         PlanRequest(config, schema, table or [], rows, locale, random_seed), limit
     )
@@ -315,17 +386,16 @@ def preview(
     if as_json:
         _json_response("preview", report.status, report.payload(), list(report.issues))
     else:
-        lines = plan_lines(report.plan) if report.plan is not None else []
-        for sample in report.tables:
-            name = json.dumps(sample.table.table)
-            lines.append(f"{name} · {len(sample.rows)} sampled rows")
-            lines.append("  " + " | ".join(json.dumps(column.name) for column in sample.columns))
-            lines.extend("  " + json.dumps(row) for row in sample.rows)
-        if lines:
-            result("\n".join(lines))
-        if report.status:
-            for issue in report.issues:
-                _render_issue(issue)
+        if report.plan is not None:
+            result(plan_summary(report.plan))
+            planned_counts = {table.id: table.rows for table in report.plan.tables}
+            console = Console()
+            for sample in report.tables:
+                console.print(preview_summary(sample, planned_counts[sample.table], console.width))
+            if verbose:
+                diagnostic("\n".join(plan_lines(report.plan)))
+        for issue in report.issues:
+            _render_issue(issue)
     if report.status:
         raise typer.Exit(report.status)
 
@@ -336,22 +406,34 @@ def _apply_prompt() -> str:
     return sys.stdin.readline()
 
 
-@app.command()
+@app.command(rich_help_panel="Save data")
 def apply(
-    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
-    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
-    rows: Annotated[int | None, typer.Option("--rows", help="Override one table's count.")] = None,
-    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
-    locale: Annotated[str | None, typer.Option("--locale")] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose")] = False,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="Run read-only preflight.")] = False,
-    yes: Annotated[bool, typer.Option("--yes", help="Skip the confirmation prompt.")] = False,
+    config: ConfigOption = Path("./seed.toml"),
+    schema: SchemaOption = None,
+    table: TableOption = None,
+    rows: RowsOption = None,
+    random_seed: SeedOption = None,
+    locale: LocaleOption = None,
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            rich_help_panel="Write safety",
+            help="Check the target and plan without writing rows.",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes",
+            rich_help_panel="Write safety",
+            help="Approve the write without an interactive prompt.",
+        ),
+    ] = False,
 ) -> None:
-    """Insert planned rows into an explicitly authorized development or test target."""
+    """Insert rows into an explicitly configured development or test database."""
     report = run_apply(
         PlanRequest(config, schema, table or [], rows, locale, random_seed),
         yes=yes,
@@ -365,35 +447,40 @@ def apply(
     if as_json:
         _json_response("apply", report.status, report.payload(), report.issues)
     else:
+        if not report.status:
+            result(apply_summary(report))
+        else:
+            outcome = report.insertion.outcome if report.insertion else "not_started"
+            diagnostic(
+                {
+                    "rolled_back": "Apply rolled back.",
+                    "unknown": "The commit result is unknown.",
+                }.get(outcome, "No rows written.")
+            )
         for issue in report.issues:
             _render_issue(issue)
-        if report.status == 0 and dry_run:
-            result("Read-only preflight passed.")
-        elif report.insertion is not None and report.insertion.counts is not None:
-            for count in report.insertion.counts:
-                result(f"Committed {count.rows} rows to {json.dumps(count.table.table)}.")
     if report.status:
         raise typer.Exit(report.status)
 
 
-@app.command()
+@app.command(rich_help_panel="Save data")
 def export(
-    format: Annotated[ExportFormat, typer.Option("--format", help="Artifact format.")],
-    config: Annotated[Path, typer.Option("--config", help="Configuration path.")] = Path(
-        "./seed.toml"
-    ),
-    schema: Annotated[str | None, typer.Option("--schema", help="Exact schema name.")] = None,
-    table: Annotated[list[str] | None, typer.Option("--table", help="Select tables.")] = None,
-    rows: Annotated[int | None, typer.Option("--rows", help="Override one table’s count.")] = None,
-    random_seed: Annotated[int | None, typer.Option("--random-seed")] = None,
-    locale: Annotated[str | None, typer.Option("--locale")] = None,
-    as_json: Annotated[bool, typer.Option("--json", help="Emit a JSON result.")] = False,
-    verbose: Annotated[bool, typer.Option("--verbose")] = False,
-    output: Annotated[Path, typer.Option("--output", help="New export directory.")] = Path(
-        "./seed-export"
-    ),
+    format: Annotated[
+        ExportFormat, typer.Option("--format", rich_help_panel="Output", help="Artifact format.")
+    ],
+    config: ConfigOption = Path("./seed.toml"),
+    schema: SchemaOption = None,
+    table: TableOption = None,
+    rows: RowsOption = None,
+    random_seed: SeedOption = None,
+    locale: LocaleOption = None,
+    as_json: JsonOption = False,
+    verbose: VerboseOption = False,
+    output: Annotated[
+        Path, typer.Option("--output", rich_help_panel="Output", help="New export directory.")
+    ] = Path("./seed-export"),
 ) -> None:
-    """Export a relational dataset from a read-only schema snapshot."""
+    """Save generated rows to SQL, CSV, or JSON files."""
     report = run_export(
         PlanRequest(config, schema, table or [], rows, locale, random_seed), format, output
     )
@@ -408,7 +495,7 @@ def export(
         for issue in report.issues:
             _render_issue(issue)
         if report.result is not None:
-            result(f"Exported to {json.dumps(str(report.result.directory))}.")
+            result(export_summary(report.result))
     if report.status:
         raise typer.Exit(report.status)
 

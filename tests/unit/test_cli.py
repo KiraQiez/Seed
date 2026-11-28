@@ -28,6 +28,17 @@ def test_help() -> None:
     assert completed.stderr == ""
 
 
+def test_narrow_help_identifies_the_first_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COLUMNS", "48")
+    monkeypatch.setenv("NO_COLOR", "1")
+    completed = run_cli("--help")
+    assert completed.returncode == 0
+    assert "Setup" in completed.stdout and "Review data" in completed.stdout
+    assert "Save data" in completed.stdout and "seed init --interactive" in completed.stdout
+    assert "\x1b[" not in completed.stdout
+    assert completed.stderr == ""
+
+
 def test_version() -> None:
     completed = run_cli("--version")
     assert completed.returncode == 0
