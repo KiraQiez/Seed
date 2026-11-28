@@ -53,6 +53,20 @@ seed validate --dataset
 
 `plan` lists the tables and expected row counts. Look for **10 planned rows**. `preview` shows three sample rows. `validate --dataset` checks all 10 rows. These commands leave the database unchanged. When a selected table references another table, the plan also shows the required tables.
 
+### Optional custom values and rules
+
+Add rules to `seed.toml` under `[rules.TABLE.COLUMN]`. This rule uses the `email` column from the walkthrough and makes its generated values unique.
+
+```toml
+[rules.customers.email]
+generator = "email"
+unique = true
+```
+
+For other columns that exist in your schema, use `choice` with `values = ["active", "pending"]` to pick from a list, or `constant` with `value = "Malaysia"` to repeat the same value. For an integer column, set `generator = "integer"` with bounds such as `min = 18` and `max = 65`. On a nullable column, `null_rate = 0.2` makes about 20% of generated values null.
+
+Match each rule to the column's PostgreSQL type. Seed handles identity columns and foreign keys automatically. Run `seed preview --limit 3` and `seed validate --dataset` again to check your changes. [Generator rules reference](docs/DATA_MODEL.md#generator-rules)
+
 ## 3. Save the rows to files
 
 ```sh
