@@ -9,7 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/KiraQiez/Seed/actions/workflows/quality.yml?query=branch%3Astaging"><img src="https://github.com/KiraQiez/Seed/actions/workflows/quality.yml/badge.svg?branch=staging&amp;event=push" alt="CI checks on staging"></a>
+  <a href="https://pypi.org/project/seed-dev-db/"><img src="https://img.shields.io/pypi/v/seed-dev-db?logo=pypi&amp;color=24754d" alt="Latest Seed version on PyPI"></a>
+  <a href="https://github.com/KiraQiez/Seed/actions/workflows/quality.yml?query=branch%3Amain"><img src="https://github.com/KiraQiez/Seed/actions/workflows/quality.yml/badge.svg?branch=main&amp;event=push" alt="CI checks on main"></a>
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/Python-3.12%2B-306998?logo=python&amp;logoColor=white" alt="Requires Python 3.12 or newer"></a>
   <a href="docs/DATA_MODEL.md#postgresql-support"><img src="https://img.shields.io/badge/PostgreSQL-15%E2%80%9319-336791?logo=postgresql&amp;logoColor=white" alt="Tested on PostgreSQL 15 through 19"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-586174" alt="Apache 2.0 license"></a>
@@ -26,18 +27,21 @@ Seed is a command-line tool for filling development and test databases with synt
 
 ## Install
 
-Install the staging checkout as a CLI with uv. Seed requires Python 3.12 or newer.
+**macOS and Linux x86-64 with Homebrew**
 
 ```sh
-git clone --branch staging https://github.com/KiraQiez/Seed.git
-cd Seed
-uv tool install .
+brew install KiraQiez/tap/seed
 seed --version
 ```
 
-If your shell cannot find `seed`, run `uv tool update-shell` and open a new terminal.
+If Homebrew prompts for trust, run `brew trust --formula KiraQiez/tap/seed` and retry.
 
-Seed is currently available from source. [Release and distribution plans](docs/RELEASE.md)
+| Other installers | Command |
+| --- | --- |
+| uv | `uv tool install seed-dev-db` |
+| pipx | `pipx install seed-dev-db` |
+
+uv and pipx work on macOS, Linux, and Windows. Seed requires Python 3.12 or newer. [Releases and checksums](https://github.com/KiraQiez/Seed/releases)
 
 ## Use Seed in a project
 
@@ -68,9 +72,11 @@ Export creates a fresh `seed-export` directory by default. The manifest indicate
 
 ## Run from source
 
-From the Seed checkout, use the locked contributor environment.
+Use the `staging` branch for development and the locked contributor environment.
 
 ```sh
+git clone --branch staging https://github.com/KiraQiez/Seed.git
+cd Seed
 uv sync --locked
 uv run --locked seed --help
 ```

@@ -1,6 +1,6 @@
 # Roadmap and implementation checklist
 
-Phases 1–8 are complete on `staging`. A task is eligible after its dependencies are complete.
+Phases 1–9 are complete on `staging`. A task is eligible after its dependencies are complete.
 
 ## Milestones
 
@@ -202,10 +202,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
   - **Dependencies** `SEED-903` · **Requirements** `NFR-005`
   - After release authorization, create the tag and GitHub Release and publish corresponding artifacts to PyPI. **Verify.** Compare published hashes and install the published version in a clean environment. Verify executable version, help, and config initialization.
   - **Verified.** The public wheel and sdist from PyPI and GitHub matched the tested artifacts byte for byte. Clean uv and pipx installs passed version, help, and configuration initialization. [GitHub Release](https://github.com/KiraQiez/Seed/releases/tag/v0.1.0) · [PyPI](https://pypi.org/project/seed-dev-db/0.1.0/) · [Release run](https://github.com/KiraQiez/Seed/actions/runs/46091747798)
-- [ ] **SEED-905 · Release the Homebrew tap** · P1
+- [x] **SEED-905 · Release the Homebrew tap** · P1
   - **Dependencies** `SEED-904` · **Requirements** `NFR-005`
   - Author and publish the approved maintainer-owned tap formula tied to an artifact checksum. **Verify.** Test tap installation and run the documented CLI smoke checks on supported Homebrew platforms.
-  - **Pending.** The candidate formula passed the temporary tap tests. The public tap will use the verified PyPI source distribution.
+  - **Verified.** The published formula pins the verified PyPI sdist and its dependencies. The tagged candidate passed on Apple Silicon, Intel macOS, and Linux x86-64. The public tap passed install, `brew test`, version, help, and configuration initialization on Apple Silicon and in a clean Linux x86-64 container. [Published formula](https://github.com/KiraQiez/homebrew-tap/blob/ba8e5f841b94cb7b921477236f05fa40bd5cb001/Formula/seed.rb)
 
 ## Future direction
 
