@@ -207,6 +207,10 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
   - Author and publish the approved maintainer-owned tap formula tied to an artifact checksum. **Verify.** Test tap installation and run the documented CLI smoke checks on supported Homebrew platforms.
   - **Verified.** The published formula pins the verified PyPI sdist and its dependencies. The tagged candidate passed on Apple Silicon, Intel macOS, and Linux x86-64. The public tap passed install, `brew test`, version, help, and configuration initialization on Apple Silicon and in a clean Linux x86-64 container. [Published formula](https://github.com/KiraQiez/homebrew-tap/blob/ba8e5f841b94cb7b921477236f05fa40bd5cb001/Formula/seed.rb)
 
+## Follow-up releases
+
+- **v0.2.0** adds guided setup, clearer terminal output, and a beginner guide. The tagged release passed the quality and packaging matrix. The public artifacts matched the tested checksums, clean uv and pipx installs passed, and the published Homebrew formula passed an upgrade and smoke test on Apple Silicon. [Release](https://github.com/KiraQiez/Seed/releases/tag/v0.2.0) · [Release checks](https://github.com/KiraQiez/Seed/actions/runs/46113007516) · [Homebrew formula](https://github.com/KiraQiez/homebrew-tap/blob/382320a8e76d9c779d80e08e7a18282e2c3972c6/Formula/seed.rb)
+
 ## Future direction
 
 Review PostgreSQL capability gaps after the MVP. Additional engines, advanced relationship rules, generator plugins, and anonymization require separate planning.
