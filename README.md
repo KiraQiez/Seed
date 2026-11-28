@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  <img src="docs/assets/seed-icon.png" alt="" width="32" height="32">
+  <img src="docs/assets/seed-icon.png" alt="" width="64" height="64">
   <br>
   <strong>Generate realistic, related test data for PostgreSQL.</strong>
 </p>
