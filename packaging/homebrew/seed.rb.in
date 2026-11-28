@@ -9,6 +9,9 @@ class Seed < Formula
   license "Apache-2.0"
 
   depends_on "python@3.14"
+  on_macos do
+    depends_on "libpq"
+  end
   on_linux do
     depends_on arch: :x86_64
   end
@@ -23,7 +26,14 @@ $resources
         venv.pip_install(Dir["*.whl"].fetch(0), build_isolation: false)
       end
     end
-    venv.pip_install_and_link(buildpath, build_isolation: false)
+    venv.pip_install(buildpath, build_isolation: false)
+    if OS.mac?
+      libpq = Formula["libpq"]
+      (bin/"seed").write_env_script libexec/"bin/seed",
+        PATH: "#{libpq.opt_bin}:$$PATH", DYLD_LIBRARY_PATH: libpq.opt_lib
+    else
+      bin.install_symlink libexec/"bin/seed"
+    end
   end
 
   test do

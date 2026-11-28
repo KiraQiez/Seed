@@ -71,6 +71,8 @@ def _wheels(packages: list[dict[str, Any]], system: str, arch: str) -> dict[str,
         if "marker" in package and not Marker(package["marker"]).evaluate(environment):
             continue
         name = package["name"]
+        if system == "darwin" and name == "psycopg-binary":
+            continue
         choices: list[tuple[int, str, str]] = []
         for wheel in package.get("wheels", []):
             url = wheel["url"]
