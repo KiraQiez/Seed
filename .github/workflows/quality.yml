@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, staging]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -37,7 +38,7 @@ jobs:
       - run: uv lock --check
       - run: uv run --locked ruff check .
       - run: uv run --locked ruff format --check .
-      - run: uv run --locked mypy src tests
+      - run: uv run --locked mypy src tests scripts
       - run: uv run --locked pytest tests/unit
       - run: uv build --sdist --wheel
       - run: uv run --locked python tests/package_smoke.py dist

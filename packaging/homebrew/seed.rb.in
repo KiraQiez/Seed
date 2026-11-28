@@ -1,0 +1,35 @@
+class Seed < Formula
+  include Language::Python::Virtualenv
+
+  desc $description
+  homepage "https://github.com/KiraQiez/Seed"
+  url $source_url
+  version $version
+  sha256 $checksum
+  license "Apache-2.0"
+
+  depends_on "python@3.14"
+  on_linux do
+    depends_on arch: :x86_64
+  end
+
+$resources
+
+  def install
+    ENV["PIP_NO_INDEX"] = "1"
+    venv = virtualenv_create(libexec, "python3.14", system_site_packages: false)
+    resources.each do |resource|
+      resource.stage do
+        venv.pip_install(Dir["*.whl"].fetch(0), build_isolation: false)
+      end
+    end
+    venv.pip_install_and_link(buildpath, build_isolation: false)
+  end
+
+  test do
+    assert_equal version.to_s, shell_output("#{bin}/seed --version").strip
+    assert_match "export", shell_output("#{bin}/seed --help")
+    system bin/"seed", "init"
+    assert_path_exists testpath/"seed.toml"
+  end
+end
