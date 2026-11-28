@@ -10,7 +10,7 @@ Use an existing `public.customers` table. If you want to insert the rows, start 
 
 ## 1. Connect and select a table
 
-From your project directory, run:
+Run guided setup from your project directory if `seed init --help` lists `--interactive`.
 
 ```sh
 seed init --interactive

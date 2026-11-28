@@ -29,6 +29,8 @@ def test_help() -> None:
 
 
 def test_narrow_help_identifies_the_first_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    for variable in ("GITHUB_ACTIONS", "FORCE_COLOR", "PY_COLORS"):
+        monkeypatch.delenv(variable, raising=False)
     monkeypatch.setenv("COLUMNS", "48")
     monkeypatch.setenv("NO_COLOR", "1")
     completed = run_cli("--help")
