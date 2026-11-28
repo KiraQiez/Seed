@@ -59,7 +59,7 @@ In `src/seed/`, start with `cli.py` for CLI wiring, `config.py` for configuratio
 
 ## Decisions
 
-These decisions are accepted for planning except ADR-017. Each row records the reason for the choice, the main alternative, and its consequence.
+These decisions describe the project architecture and distribution. Each row records the reason for the choice, the main alternative, and its consequence.
 
 | ID | Decision | Why, alternative, and consequence |
 |---|---|---|
@@ -79,4 +79,4 @@ These decisions are accepted for planning except ADR-017. Each row records the r
 | ADR-014 | Strict target locking | Table locks protect the empty-table check from other writers. Advisory locks would only coordinate Seed. Scoped grants and contention are tradeoffs. |
 | ADR-015 | Explicit offline identities | Concrete IDs preserve exported relationships. A matching empty schema and sequence reconciliation are required for import. |
 | ADR-016 | Composite tuples and simple checks | Support common junctions and numeric bounds. Block constraints outside the [support matrix](DATA_MODEL.md#postgresql-support). |
-| [ADR-017](RELEASE.md#naming-licence-and-versions) | Open release identity and licence | Verify project, executable, distribution, and tap names and approve the proposed Apache-2.0 licence. |
+| [ADR-017](RELEASE.md#naming-licence-and-versions) | Release identity and licence | Publish as `seed-dev-db` on PyPI while keeping the `seed` executable and Python import. Use `KiraQiez/tap/seed` and Apache-2.0 with copyright 2026 KiraQiez. |

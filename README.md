@@ -12,7 +12,7 @@
   <a href="https://github.com/KiraQiez/Seed/actions/workflows/quality.yml?query=branch%3Astaging"><img src="https://github.com/KiraQiez/Seed/actions/workflows/quality.yml/badge.svg?branch=staging&amp;event=push" alt="CI checks on staging"></a>
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/Python-3.12%2B-306998?logo=python&amp;logoColor=white" alt="Requires Python 3.12 or newer"></a>
   <a href="docs/DATA_MODEL.md#postgresql-support"><img src="https://img.shields.io/badge/PostgreSQL-15%E2%80%9319-336791?logo=postgresql&amp;logoColor=white" alt="Tested on PostgreSQL 15 through 19"></a>
-  <a href="#install"><img src="https://img.shields.io/badge/Install-from%20source-24754d" alt="Install from source"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-586174" alt="Apache 2.0 license"></a>
 </p>
 
 <p align="center">
@@ -88,4 +88,4 @@ Run `just check` for lint, formatting, types, and unit tests. With Docker and Co
 | Contributor checks and conventions | [Development guide](docs/DEVELOPMENT.md) · [Repository instructions](AGENTS.md) |
 | Release plans and implementation status | [Release guide](docs/RELEASE.md) · [Roadmap](docs/ROADMAP.md) |
 
-[Licence status](docs/RELEASE.md#naming-licence-and-versions)
+[Apache License 2.0](LICENSE)

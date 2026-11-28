@@ -3,10 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "seed"
+name = "seed-dev-db"
 dynamic = ["version"]
 description = "Schema-aware synthetic data for development and testing"
-readme = "README.md"
+readme = "docs/PYPI.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{name = "KiraQiez"}]
 requires-python = ">=3.12"
 dependencies = [
     "faker>=40,<42",
@@ -17,6 +20,11 @@ dependencies = [
     "typer>=0.29.3,<0.30",
 ]
 
+[project.urls]
+Homepage = "https://github.com/KiraQiez/Seed"
+Documentation = "https://github.com/KiraQiez/Seed#documentation"
+Issues = "https://github.com/KiraQiez/Seed/issues"
+
 [project.scripts]
 seed = "seed.cli:main"
 
@@ -26,8 +34,13 @@ path = "src/seed/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/seed"]
 
+[tool.hatch.build.targets.sdist]
+include = ["/src/seed", "/docs/PYPI.md", "/LICENSE", "/pyproject.toml"]
+
 [dependency-groups]
+build = ["hatchling"]
 dev = [
+    "packaging>=26,<27",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "ruff>=0.17.6",
