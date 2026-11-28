@@ -118,6 +118,7 @@ jobs:
         with:
           version: "0.13.9"
       - uses: Homebrew/actions/setup-homebrew@b4c226ae32acab42c7c2c0745ad224a1e9958022
+        if: runner.os == 'Linux'
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: distributions
@@ -141,7 +142,7 @@ jobs:
           git -C "$tap" -c user.name="Seed CI" -c user.email="seed-ci@example.invalid" commit -qm "Add candidate formula"
           brew tap --custom-remote seed-ci/tap "file://$tap"
           brew trust --formula seed-ci/tap/seed
-          brew install --build-from-source seed-ci/tap/seed
+          brew install seed-ci/tap/seed
           brew test seed-ci/tap/seed
 
   publish-pypi:
