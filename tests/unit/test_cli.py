@@ -9,7 +9,7 @@ import pytest
 from rich.text import Text
 from typer.testing import CliRunner
 
-from seed import cli
+from seed import __version__, cli
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -44,7 +44,7 @@ def test_narrow_help_identifies_the_first_step(monkeypatch: pytest.MonkeyPatch) 
 def test_version() -> None:
     completed = run_cli("--version")
     assert completed.returncode == 0
-    assert completed.stdout == "0.1.0\n"
+    assert completed.stdout == f"{__version__}\n"
     assert completed.stderr == ""
 
 

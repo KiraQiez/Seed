@@ -45,7 +45,7 @@ uv and pipx work on macOS, Linux, and Windows. Seed requires Python 3.12 or newe
 
 ## Use Seed in a project
 
-Start with `seed init` to create `seed.toml`. Set `DATABASE_URL` for your development or test database, then use `seed preview` to review generated rows. The staging CLI also supports `seed init --interactive` to choose tables and row counts.
+Start with `seed init --interactive` to choose tables and row counts. Set `DATABASE_URL` for your development or test database, then run `seed preview` to see sample rows.
 
 The [beginner guide](Guide.md) walks through setup, preview, export, and the checks before inserting rows. It also includes a disposable PostgreSQL example.
 
