@@ -85,7 +85,7 @@ Run `just check` for lint, formatting, types, and unit tests. With Docker and Co
 | Configuration, supported schemas, and output formats | [Data model](docs/DATA_MODEL.md) |
 | Database and file safety | [Security](docs/SECURITY.md) |
 | Project design and scope | [Architecture](docs/ARCHITECTURE.md) · [Product requirements](docs/PRD.md) |
-| Contributor checks and conventions | [Development guide](docs/DEVELOPMENT.md) · [Repository instructions](AGENTS.md) |
+| Contributor checks and conventions | [Development guide](docs/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md) |
 | Release plans and implementation status | [Release guide](docs/RELEASE.md) · [Roadmap](docs/ROADMAP.md) |
 
 [Apache License 2.0](LICENSE)

@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            test "$GITHUB_SHA" = "$(git rev-parse refs/remotes/origin/main)"
+            test "$(git rev-parse "$GITHUB_SHA^{commit}")" = "$(git rev-parse refs/remotes/origin/main)"
           fi
       - name: Build and verify the release
         shell: bash

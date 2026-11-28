@@ -186,12 +186,14 @@ P0 marks core, safety, or release gates. P1 marks other required MVP work. Requi
 
 ### Phase 9 Release
 
-- [ ] **SEED-901 · Resolve distribution names and licence** · P0
+- [x] **SEED-901 · Resolve distribution names and licence** · P0
   - **Dependencies** `SEED-804` · **Requirements** `NFR-005`
   - Verify product, executable, import, distribution, and tap names and finalize the licence decision. **Verify.** Record the maintainer-approved choices and evidence of naming checks. Ensure metadata and documentation match and include the approved licence.
-- [ ] **SEED-902 · Prepare release and contributor material** · P1
+  - **Verified.** Maintainer approved Seed, the `seed` executable and import, `seed-dev-db` on PyPI, and `KiraQiez/tap/seed`. The PyPI project and tap formula were available during the naming check. Verified Apache-2.0 and the 2026 KiraQiez notice in the wheel and sdist.
+- [x] **SEED-902 · Prepare release and contributor material** · P1
   - **Dependencies** `SEED-901` · **Requirements** `NFR-004`, `NFR-005`
   - Add the changelog, versioned release notes, installation guidance, and open-source contribution instructions. **Verify.** Review version/tag correspondence, installation steps, the contribution workflow, and documented limits.
+  - **Verified.** Version 0.1.0 matches the changelog and release notes. Local uv and pipx installs of the candidate wheel passed version, help, and configuration initialization.
 - [ ] **SEED-903 · Validate release automation** · P0
   - **Dependencies** `SEED-902` · **Requirements** `NFR-005`, `NFR-006`
   - Prepare the protected GitHub Actions build and PyPI Trusted Publishing workflow with artifact hashes and scoped permission. **Verify.** Run a staged release, with TestPyPI if approved. Verify that tested packages match the intended artifacts and that the publish job alone can request its OIDC token.
