@@ -1,4 +1,4 @@
-"""Exercise the README on a premigrated, disposable database."""
+"""Exercise the beginner guide with a disposable database."""
 
 import os
 import subprocess
@@ -7,12 +7,43 @@ from dataclasses import replace
 from pathlib import Path
 from time import monotonic
 
+import pytest
 from conftest import PostgresFixture
 
 
-def test_readme_walkthrough(postgres: PostgresFixture, tmp_path: Path) -> None:
-    postgres.sql("CREATE DATABASE seed_readme")
-    target = replace(postgres, database="seed_readme")
+def _guided_init(seed: Path, directory: Path, env: dict[str, str]) -> None:
+    if sys.platform == "win32":
+        pytest.skip("This terminal fixture uses a POSIX pseudoterminal")
+    master, terminal = os.openpty()
+    try:
+        with subprocess.Popen(
+            [str(seed), "init", "--interactive"],
+            cwd=directory,
+            env=env,
+            stdin=terminal,
+            stderr=terminal,
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ) as process:
+            os.write(master, b"\ncustomers\n\n\n")
+            try:
+                output, _ = process.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.communicate()
+                raise
+            assert process.returncode == 0, output
+            assert "Next: seed preview --limit 3" in output
+    finally:
+        os.close(master)
+        os.close(terminal)
+
+
+@pytest.mark.parametrize("setup", ["manual", "guided"])
+def test_guide_walkthrough(postgres: PostgresFixture, tmp_path: Path, setup: str) -> None:
+    database = f"seed_guide_{setup}"
+    postgres.sql(f"CREATE DATABASE {database}")
+    target = replace(postgres, database=database)
     target.sql("""
         CREATE TABLE public.customers (
             id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -23,7 +54,7 @@ def test_readme_walkthrough(postgres: PostgresFixture, tmp_path: Path) -> None:
     env.update(DATABASE_URL=target.url, PYTHONIOENCODING="utf-8")
     seed = Path(sys.executable).with_name("seed.exe" if os.name == "nt" else "seed")
 
-    def run(*args: str) -> None:
+    def run(*args: str) -> str:
         process = subprocess.run(
             [str(seed), *args],
             cwd=tmp_path,
@@ -36,10 +67,25 @@ def test_readme_walkthrough(postgres: PostgresFixture, tmp_path: Path) -> None:
         )
         assert process.returncode == 0, process.stdout + process.stderr
         assert postgres.env["SEED_FIXTURE_PASSWORD"] not in process.stdout + process.stderr
+        return process.stdout
 
     start = monotonic()
-    run("init")
     config = tmp_path / "seed.toml"
+    if setup == "guided":
+        _guided_init(seed, tmp_path, env)
+    else:
+        run("init")
+        with config.open("a", encoding="utf-8") as stream:
+            stream.write("""
+[tables.customers]
+rows = 10
+""")
+    assert "10 planned rows" in run("plan")
+    assert "3 of 10 rows" in run("preview", "--limit", "3")
+    assert "Validation passed" in run("validate", "--dataset")
+    assert "Exported 10 rows as JSON" in run("export", "--format", "json")
+    assert target.sql("SELECT count(*) FROM public.customers") == "0"
+
     with config.open("a", encoding="utf-8") as stream:
         stream.write(f"""
 [safety]
@@ -50,16 +96,11 @@ port = {target.port}
 database = "{target.database}"
 schema = "public"
 """)
-    run("inspect")
-    run("plan", "--table", "customers")
-    run("preview", "--table", "customers", "--limit", "5")
-    run("validate", "--table", "customers", "--dataset")
-    run("export", "--table", "customers", "--format", "json")
-    run("apply", "--table", "customers", "--dry-run")
+    assert "Dry-run passed. No rows written." in run("apply", "--dry-run")
     assert target.sql("SELECT count(*) FROM public.customers") == "0"
-    run("apply", "--table", "customers", "--yes")
+    assert "Committed 10 rows" in run("apply", "--yes")
     elapsed = monotonic() - start
     assert elapsed < 600
-    assert target.sql("SELECT count(*) FROM public.customers") == "100"
+    assert target.sql("SELECT count(*) FROM public.customers") == "10"
     assert (tmp_path / "seed-export" / "manifest.json").is_file()
-    print(f"README walkthrough elapsed {elapsed:.2f} seconds")
+    print(f"Guide walkthrough ({setup}) elapsed {elapsed:.2f} seconds")

@@ -18,7 +18,7 @@
 
 <p align="center">
   <a href="#install">Install</a> ·
-  <a href="#use-seed-in-a-project">Use Seed</a> ·
+  <a href="Guide.md">Guide</a> ·
   <a href="#run-from-source">Run from source</a> ·
   <a href="#documentation">Docs</a>
 </p>
@@ -45,30 +45,9 @@ uv and pipx work on macOS, Linux, and Windows. Seed requires Python 3.12 or newe
 
 ## Use Seed in a project
 
-In your project directory, create `seed.toml` with `seed init`. Set `DATABASE_URL` in your shell to your development or test database URL. Set the schema in `seed.toml` if it differs from `public`. This example assumes your schema already has a `customers` table. [Configuration example](docs/DATA_MODEL.md#configuration)
+Start with `seed init` to create `seed.toml`. Set `DATABASE_URL` for your development or test database, then use `seed preview` to review generated rows. The staging CLI also supports `seed init --interactive` to choose tables and row counts.
 
-```sh
-seed inspect
-seed plan --table customers
-seed preview --table customers --limit 5
-```
-
-To write rows, add the matching `[safety.target]` and set `safety.environment` to `development` or `test`. Review the dry-run, then confirm the write at the prompt. [Apply safety](docs/SECURITY.md#apply-safety)
-
-```sh
-seed apply --table customers --dry-run
-seed apply --table customers
-```
-
-| When you want to… | Run |
-| --- | --- |
-| Check all planned rows offline | `seed validate --table customers --dataset` |
-| Preview a sample | `seed preview --table customers --limit 5` |
-| Export a relational dataset | `seed export --table customers --format json` |
-| Export files for PostgreSQL import | `seed export --table customers --format sql` or `seed export --table customers --format csv` |
-| Read the plan in a script | `seed plan --table customers --json` |
-
-Export creates a fresh `seed-export` directory by default. The manifest indicates that all files were written. [Import and sequence reconciliation](docs/SECURITY.md#sql-and-export-safety)
+The [beginner guide](Guide.md) walks through setup, preview, export, and the checks before inserting rows. It also includes a disposable PostgreSQL example.
 
 ## Run from source
 
