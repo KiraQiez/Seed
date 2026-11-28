@@ -2,23 +2,17 @@
 
 ## Naming, licence, and versions
 
-Treat Seed, the executable, import package, and distribution names as provisional. Before the first public tag, verify PyPI and GitHub availability, platform collisions, and Homebrew formula and tap names. Approve Apache-2.0 or record the chosen licence and include it in the source and distributions. Update examples, artifacts, and [ADR-017](ARCHITECTURE.md#decisions).
+The project is Seed. The executable and Python import are both `seed`, the PyPI distribution is `seed-dev-db`, and the Homebrew formula is `KiraQiez/tap/seed`. Seed is licensed under Apache-2.0. Copyright 2026 KiraQiez. [Licence](../LICENSE)
 
-Use SemVer. Start with approved `0.x` releases, publish pre-release candidates when compatibility or packaging needs wider validation, and call out breaking changes even during `0.x`. Treat configuration and JSON contract versions separately from package versions. Promote to `1.0.0` when the documented interfaces and support matrix are ready to be maintained as stable contracts.
+Use SemVer tags such as `v0.1.0`. Match the tag to the CLI version, changelog, and versioned release notes. The configuration and JSON contract have their own versions.
 
-## Build and validation
+## Release checklist
 
-1. Review the [release checklist](../.ai/CHECKLIST.md#before-release), run the full tests and benchmarks, and review the support matrix and limitations.
-2. Update the changelog with features, fixes, security changes, compatibility notes, and relevant upgrades. Ensure the package version, changelog, and intended Git tag agree.
-3. Build the wheel and source distribution with `uv build` using Hatchling. Inspect included files, package metadata, dependency declarations, licence, and entry point. Build a wheel from the sdist to verify a complete source artifact.
-4. Run a clean wheel install and the [smoke tests](DEVELOPMENT.md#tooling-and-quality-gates) on supported platforms. Record versions, results, and artifact hashes.
+1. Push the candidate to `staging`. Check the Quality and Release workflows, including the database suites, reference benchmark, package metadata, hashes, clean installs, and temporary Homebrew tap. Promote the verified commit to `main` and wait for its quality checks.
+2. For the first release, recheck the [PyPI project name](https://pypi.org/project/seed-dev-db/) and register a pending publisher for `KiraQiez/Seed`, workflow `release.yml`, and environment `pypi`. Restrict the GitHub environment to release tags and require maintainer review. [PyPI publisher setup](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
+3. Push the matching tag from the verified `main` commit. Review the protected deployment after the release checks pass. The pipeline publishes the same tested wheel and source distribution to PyPI and attaches both files, release notes, and `SHA256SUMS` to the GitHub Release.
+4. Download the public files from both channels and compare their SHA-256 hashes with the release manifest. Install the exact version with uv and pipx in isolated environments and run `seed --version`, `seed --help`, and `seed init`.
+5. Render the Homebrew formula against the verified PyPI source URL and checksum. Publish it to [the maintainer tap](https://github.com/KiraQiez/homebrew-tap) after the candidate checks pass on Apple Silicon, Intel macOS, and Linux x86-64. Confirm `brew install KiraQiez/tap/seed` and `brew test KiraQiez/tap/seed`.
+6. Record the release, install checks, and any pending channels in the [roadmap](ROADMAP.md).
 
-## Distribution
-
-- **GitHub Releases.** Create a versioned release from an approved tag, attach the verified wheel and sdist and their SHA-256 checksums, and include changelog highlights, availability, and known limits.
-- **PyPI.** Configure Trusted Publishing for the exact repository, workflow, and protected environment. Grant OIDC token permission only to the publish job. Test with TestPyPI where useful and publish the same artifacts validated in CI. Verify artifact hashes and a clean install from the index after publishing. [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
-- **Homebrew.** Use a maintainer-owned tap after name and dependency verification. Pin the formula to a release artifact and checksum, and verify it with tap install and executable smoke tests. Homebrew Core submission is outside this rollout. [Homebrew taps](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap)
-
-Once published, document installation with `pipx install <distribution>` or `uv tool install <distribution>`, plus `brew install <owner>/<tap>/<formula>` once the tap is available. Replace placeholders with verified names before publishing user-facing installation instructions. Verify Linux and macOS tap behavior where supported, and use Python installation instructions for Windows.
-
-For a bad release, record the affected version and provide recovery instructions. Yank a broken PyPI release where appropriate and issue a corrected version with fresh artifacts. Keep tags, changelog, and release notes aligned.
+For a bad package release, document recovery steps and yank the affected PyPI version where appropriate. Publish corrected artifacts under a new version and update the tap to match.
