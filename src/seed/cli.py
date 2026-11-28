@@ -19,7 +19,7 @@ from seed.reporting.inspection import inspection_lines
 from seed.reporting.plan import plan_issues, plan_lines
 from seed.workflows.apply import run_apply
 from seed.workflows.export import ExportFormat, run_export
-from seed.workflows.initialize import initialize_config
+from seed.workflows.initialize import guided_starter, initialize_config
 from seed.workflows.preview import preview as preview_request
 from seed.workflows.validate import validate as validate_request
 
@@ -63,10 +63,18 @@ def init(
     verbose: Annotated[
         bool, typer.Option("--verbose", help="Show additional diagnostics.")
     ] = False,
+    interactive: Annotated[
+        bool, typer.Option("--interactive", help="Choose tables and row counts with prompts.")
+    ] = False,
 ) -> None:
     """Create a starter configuration."""
     try:
-        created = initialize_config(config)
+        if interactive and as_json:
+            raise ConfigError("Use --interactive or --json separately.")
+        created = initialize_config(config, starter=_guided_setup if interactive else None)
+    except (EOFError, KeyboardInterrupt) as error:
+        diagnostic("Setup cancelled.")
+        raise typer.Exit(5 if isinstance(error, EOFError) else 130) from None
     except (OSError, ConfigError) as error:
         code = "CONFIG_INVALID" if isinstance(error, ConfigError) else "INIT_FAILED"
         status = 2 if isinstance(error, ConfigError) else 6
@@ -89,6 +97,26 @@ def init(
         _json_response("init", 0, {"path": str(config), "created": created}, [])
     else:
         result("Created seed configuration." if created else "Seed configuration already exists.")
+        if created and interactive:
+            result("Set DATABASE_URL to your development or test database connection URL.")
+            result("Next: seed preview --limit 3")
+            if config != Path("seed.toml"):
+                result("Use the same --config path for preview.")
+
+
+def _guided_setup() -> str:
+    if not (sys.stdin.isatty() and sys.stderr.isatty()):
+        raise ConfigError("Open a terminal to use guided setup, or run seed init.")
+
+    def prompt(message: str) -> str:
+        sys.stderr.write(message)
+        sys.stderr.flush()
+        line = sys.stdin.readline()
+        if not line:
+            raise EOFError
+        return line.rstrip("\r\n")
+
+    return guided_starter(prompt, diagnostic)
 
 
 @app.command()

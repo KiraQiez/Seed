@@ -2,8 +2,14 @@
 
 import subprocess
 import sys
+from json import loads
+from pathlib import Path
 
+import pytest
 from rich.text import Text
+from typer.testing import CliRunner
+
+from seed import cli
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -38,7 +44,6 @@ def test_unrecognized_input_uses_redacted_stderr() -> None:
 
 
 def test_init_json() -> None:
-    from json import loads
     from tempfile import TemporaryDirectory
 
     with TemporaryDirectory() as directory:
@@ -51,3 +56,31 @@ def test_init_json() -> None:
         refused = run_cli("init", "--config", directory, "--json")
         assert refused.returncode == 6
         assert loads(refused.stdout)["issues"][0]["code"] == "INIT_FAILED"
+
+
+def test_guided_setup_requires_terminal_and_rejects_json(tmp_path: Path) -> None:
+    target = tmp_path / "seed.toml"
+    command = ("init", "--interactive", "--config", str(target))
+    nonterminal = run_cli(*command)
+    assert nonterminal.returncode == 2
+    assert "Open a terminal" in nonterminal.stderr
+    invalid = run_cli(*command, "--json")
+    assert invalid.returncode == 2
+    assert loads(invalid.stdout)["issues"][0]["code"] == "CONFIG_INVALID"
+    assert invalid.stderr == ""
+    assert not target.exists()
+
+
+@pytest.mark.parametrize(("error", "status"), [(EOFError, 5), (KeyboardInterrupt, 130)])
+def test_guided_setup_cancels_without_creating_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: type[BaseException], status: int
+) -> None:
+    def cancel() -> str:
+        raise error
+
+    monkeypatch.setattr(cli, "_guided_setup", cancel)
+    target = tmp_path / "seed.toml"
+    result = CliRunner().invoke(cli.app, ["init", "--interactive", "--config", str(target)])
+    assert result.exit_code == status
+    assert "Setup cancelled" in result.stderr
+    assert not target.exists()
